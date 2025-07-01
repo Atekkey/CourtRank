@@ -15,11 +15,7 @@ Build 36
 API SDK 33  
 
 ## Firebase  
-npm install @react-native-firebase/app
-npm install @react-native-firebase/auth
-npm install @react-native-firebase/firestore
-npm install @react-native-firebase/functions
-
+npm install firebase  
 
 # Start  
 npx expo start  

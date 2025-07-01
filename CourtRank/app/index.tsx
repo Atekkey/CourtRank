@@ -17,19 +17,19 @@
 // app/index.tsx
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Import your config (adjust path if needed)
-import { firebaseConfig } from '../firebaseConfig';
+import firebaseConfig from '../firebaseConfig';
 
 export default function Index() {
   useEffect(() => {
     console.log('Testing Firebase...');
     
     try {
-      const app = initializeApp(firebaseConfig);
+      const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
       const db = getFirestore(app);
       const auth = getAuth(app);
       
