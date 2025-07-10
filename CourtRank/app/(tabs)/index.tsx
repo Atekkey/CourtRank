@@ -22,7 +22,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Import your config (adjust path if needed)
-import firebaseConfig from '../firebaseConfig';
+import firebaseConfig from '../../firebaseConfig';
 
 export default function Index() {
   useEffect(() => {
