@@ -1,12 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { getLeagues, joinLeague } from '../../services/firebaseService';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function DiscoverLeagues() {
-  const leagues = [
-    { name: 'Summer Championship', players: 24, level: 'Intermediate', fee: '$50' },
-    { name: 'Beginner Friendly League', players: 16, level: 'Beginner', fee: '$30' },
-    { name: 'Advanced Tournament', players: 12, level: 'Advanced', fee: '$75' },
-    { name: 'Weekend Warriors', players: 20, level: 'Mixed', fee: '$40' },
-  ];
 
   return (
     <ScrollView style={styles.container}>
@@ -23,18 +20,6 @@ export default function DiscoverLeagues() {
           <Text style={styles.filterText}>Filter by Location</Text>
         </TouchableOpacity>
       </View>
-      
-      {leagues.map((league, index) => (
-        <View key={index} style={styles.leagueCard}>
-          <Text style={styles.leagueName}>{league.name}</Text>
-          <Text style={styles.leagueInfo}>Level: {league.level}</Text>
-          <Text style={styles.leagueInfo}>Players: {league.players}</Text>
-          <Text style={styles.leagueInfo}>Entry Fee: {league.fee}</Text>
-          <TouchableOpacity style={styles.joinButton}>
-            <Text style={styles.joinButtonText}>Join League</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
     </ScrollView>
   );
 }
