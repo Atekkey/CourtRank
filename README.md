@@ -18,5 +18,6 @@ API SDK 33
 npm install firebase  
 
 # Start  
-npx expo start  
+Be in Dir: CourtRank/CourtRank
+$ npx expo start  
 

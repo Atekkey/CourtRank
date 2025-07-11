@@ -5,8 +5,13 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2f95dc',
+        tabBarActiveTintColor: 'orange',
         tabBarInactiveTintColor: 'gray',
+        tabBarStyle: {
+          height: 60, // Increase height
+          paddingBottom: 0, // Add padding at bottom
+          paddingTop: 0, // Add padding at top
+        },
       }}
     >
       <Tabs.Screen
