@@ -3,6 +3,7 @@
 node --version == v22.16.0  
 npm --version == 10.9.2  
 React Native & Expo  
+npm install react-native-chart-kit react-native-svg
 
 ## VSCode
 React Native Tools  
