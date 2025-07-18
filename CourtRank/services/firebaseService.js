@@ -20,19 +20,22 @@ import {
 import { db, auth } from '../firebaseConfig';
 
 // Auth Functions
-export const registerUser = async (email, password, userData) => {
+export const registerPlayer = async (email, password, userData) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    
-    // Add user profile to Firestore
-    await addDoc(collection(db, 'users'), {
-      uid: user.uid,
+
+    // Add player profile to Firestore
+    // uses player.uid as the document ID
+    await setDoc(doc(db, 'users', user.uid), {
+      created_at: new Date(),
       email: user.email,
-      ...userData,
-      createdAt: new Date()
+      first_name: userData.first_name,
+      last_name: userData.last_name,
+      elo_array: [],
+      // Note, player_id not stored bc it is docID
     });
-    
+
     return user;
   } catch (error) {
     throw error;
@@ -68,11 +71,15 @@ export const getCurrentUser = () => {
 // League Functions
 export const createLeague = async (leagueData) => {
   try {
-    const docRef = await addDoc(collection(db, 'leagues'), {
-      ...leagueData,
-      createdAt: new Date(),
-      players: [],
-      matches: []
+    const docRef = await setDoc(doc(db, 'leagues', leagueData.id), {
+      ...leagueData, // puts all league data in here, not nested (like python **)
+      // admin_pid, is_public, league_end_date, league_name, league_k_factor
+      starting_elo: 800, // Default starting ELO rating
+      created_at: new Date(),
+      elo_array: [],
+      matches: [],
+      whitelist_pids: [],
+      players: [], // Todo, init admin into everything
     });
     return docRef.id;
   } catch (error) {
@@ -85,7 +92,7 @@ export const getLeagues = async () => {
     const querySnapshot = await getDocs(collection(db, 'leagues'));
     const leagues = [];
     querySnapshot.forEach((doc) => {
-      leagues.push({ id: doc.id, ...doc.data() });
+      leagues.push({ league_id: doc.id, ...doc.data() }); // TODO: if needed, only take important brief info
     });
     return leagues;
   } catch (error) {
@@ -93,34 +100,62 @@ export const getLeagues = async () => {
   }
 };
 
-export const joinLeague = async (leagueId, userId) => {
+export const joinLeague = async (league_id, user_id) => {
   try {
-    const leagueRef = doc(db, 'leagues', leagueId);
-    // You'll need to implement array union logic here
+    const leagueRef = doc(db, 'leagues', league_id);
+    const leagueDoc = await getDoc(leagueRef);
+    if (!leagueDoc.exists()) { throw new Error('League not found'); }
+    const leagueData = leagueDoc.data();
+    
+    if (!leagueData.is_public) {
+      // League is private... Check if user is in whitelist. Confirms not empty first
+      if (!leagueData.whitelist_pids || !leagueData.whitelist_pids.includes(user_id)) {
+        throw new Error('An invite is required to join this league');
+      }
+    }
+
+    if (leagueData.players && leagueData.players.includes(user_id)) {
+      throw new Error('You are already a member of this league');
+    }
+
+    // Add user to the league's players array
     await updateDoc(leagueRef, {
-      players: [...players, userId] // This needs proper array union
+      players: arrayUnion(user_id),
+      elo_array: arrayUnion({ // USER LEAGUE DATA. TODO: Should this be a separate collection??
+        user_id: user_id,
+        elo: leagueData.starting_elo || 800, // takes 800 if starting elo DNE
+        wins: 0,
+        losses: 0,
+        ties: 0
+      })
     });
+    
+    return { success: true, message: 'Successfully joined the league' };
   } catch (error) {
     throw error;
   }
 };
 
-export const getUserLeagues = async (userId) => {
+export const getUserLeagues = async (user_id) => {
   try {
     const q = query(
       collection(db, 'leagues'),
-      where('players', 'array-contains', userId)
+      where('players', 'array-contains', user_id),
     );
     const querySnapshot = await getDocs(q);
     const leagues = [];
     querySnapshot.forEach((doc) => {
-      leagues.push({ id: doc.id, ...doc.data() });
+      leagues.push({ league_id: doc.id, ...doc.data() });
     });
     return leagues;
   } catch (error) {
     throw error;
   }
 };
+
+
+/////////////////// REVIEWED ALL ABOVE
+
 
 // Match Functions
 export const createMatch = async (matchData) => {
@@ -154,23 +189,23 @@ export const subscribeToLeagues = (callback) => {
   const unsubscribe = onSnapshot(collection(db, 'leagues'), (snapshot) => {
     const leagues = [];
     snapshot.forEach((doc) => {
-      leagues.push({ id: doc.id, ...doc.data() });
+      leagues.push({ league_id: doc.id, ...doc.data() });
     });
     callback(leagues);
   });
   return unsubscribe;
 };
 
-export const subscribeToUserLeagues = (userId, callback) => {
+export const subscribeToUserLeagues = (user_id, callback) => {
   const q = query(
     collection(db, 'leagues'),
-    where('players', 'array-contains', userId)
+    where('players', 'array-contains', user_id)
   );
   
   const unsubscribe = onSnapshot(q, (snapshot) => {
     const leagues = [];
     snapshot.forEach((doc) => {
-      leagues.push({ id: doc.id, ...doc.data() });
+      leagues.push({ league_id: doc.id, ...doc.data() });
     });
     callback(leagues);
   });
