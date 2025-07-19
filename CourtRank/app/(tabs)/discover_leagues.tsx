@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput 
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
+
 // Need to remove later, mock data
 const mockLeagues = [
   {

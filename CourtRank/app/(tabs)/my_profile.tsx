@@ -1,7 +1,30 @@
-
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyProfile() {
+  const { logout, user } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -12,6 +35,9 @@ export default function MyProfile() {
         <Text style={styles.playerName}>Alex Johnson</Text>
         <Text style={styles.playerLevel}>Intermediate Player</Text>
         <Text style={styles.playerLocation}>Toledo, Ohio</Text>
+        {user?.email && (
+          <Text style={styles.playerEmail}>{user.email}</Text>
+        )}
       </View>
       
       <View style={styles.statsCard}>
@@ -52,6 +78,13 @@ export default function MyProfile() {
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem}>
           <Text style={styles.settingText}>Help & Support</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Logout Section */}
+      <View style={styles.logoutCard}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -99,6 +132,12 @@ const styles = StyleSheet.create({
   playerLocation: {
     fontSize: 16,
     color: '#666',
+    marginBottom: 5,
+  },
+  playerEmail: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
   statsCard: {
     backgroundColor: 'white',
@@ -169,5 +208,33 @@ const styles = StyleSheet.create({
   settingText: {
     fontSize: 16,
     color: '#333',
+  },
+  logoutCard: {
+    backgroundColor: 'white',
+    margin: 15,
+    marginBottom: 30,
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutButton: {
+    backgroundColor: '#f44336',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

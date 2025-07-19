@@ -1,4 +1,4 @@
-// services/firebaseService.js
+
 import { 
   collection, 
   addDoc, 
@@ -17,7 +17,7 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { db, auth } from '../firebaseConfig';
+import { db, auth } from './firebaseConfig';
 
 // Auth Functions
 export const registerPlayer = async (email, password, userData) => {
@@ -154,16 +154,20 @@ export const getUserLeagues = async (user_id) => {
 };
 
 
-/////////////////// REVIEWED ALL ABOVE
+/////////////////// All Below Might be unnecessary
 
 
 // Match Functions
+
 export const createMatch = async (matchData) => {
   try {
     const docRef = await addDoc(collection(db, 'matches'), {
-      ...matchData,
+      league_id: matchData.league_id, // League ID
+      league_k_factor: matchData.league_k_factor, // League K-factor
+      winning_players: matchData.winning_players, // Array of player IDs
+      losing_players: matchData.losing_players, // Array of player IDs
       createdAt: new Date(),
-      status: 'pending'
+      // status: 'init'
     });
     return docRef.id;
   } catch (error) {
@@ -171,20 +175,21 @@ export const createMatch = async (matchData) => {
   }
 };
 
-export const updateMatchResult = async (matchId, result) => {
-  try {
-    const matchRef = doc(db, 'matches', matchId);
-    await updateDoc(matchRef, {
-      result: result,
-      status: 'completed',
-      completedAt: new Date()
-    });
-  } catch (error) {
-    throw error;
-  }
-};
+// export const updateMatchResult = async (matchId, result) => {
+//   try {
+//     const matchRef = doc(db, 'matches', matchId);
+//     await updateDoc(matchRef, {
+//       result: result,
+//       status: 'completed',
+//       completedAt: new Date()
+//     });
+//   } catch (error) {
+//     throw error;
+//   }
+// };
 
 // Real-time listeners
+
 export const subscribeToLeagues = (callback) => {
   const unsubscribe = onSnapshot(collection(db, 'leagues'), (snapshot) => {
     const leagues = [];
