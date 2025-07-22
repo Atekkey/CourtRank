@@ -3,61 +3,41 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput 
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
-
-// Need to remove later, mock data
-const mockLeagues = [
-  {
-    id: '1',
-    name: 'Downtown Basketball League',
-    sport: 'Basketball',
-    location: 'Downtown Community Center',
-    members: 24,
-    maxMembers: 30,
-    description: 'Competitive basketball league for intermediate players'
-  },
-  {
-    id: '2',
-    name: 'Riverside Tennis Club',
-    sport: 'Tennis',
-    location: 'Riverside Park',
-    members: 12,
-    maxMembers: 20,
-    description: 'Friendly tennis matches for beginners'
-  },
-  {
-    id: '3',
-    name: 'City Soccer Championship',
-    sport: 'Soccer',
-    location: 'City Sports Complex',
-    members: 45,
-    maxMembers: 50,
-    description: 'Competitive soccer league for advanced players'
-  },
-  {
-    id: '4',
-    name: 'Morning Volleyball League',
-    sport: 'Volleyball',
-    location: 'Beach Courts',
-    members: 18,
-    maxMembers: 24,
-    description: 'Early morning volleyball matches'
-  },
-  {
-    id: '5',
-    name: 'Elite Basketball Pro',
-    sport: 'Basketball',
-    location: 'Elite Sports Center',
-    members: 16,
-    maxMembers: 20,
-    description: 'High-level basketball competition'
-  }
-];
+// REMOVED: Mock data - now fetching from database
 
 export default function DiscoverLeagues() {
-  const [leagues, setLeagues] = useState(mockLeagues);
-  const [filteredLeagues, setFilteredLeagues] = useState(mockLeagues);
+  // CHANGED: Initialize with empty array instead of mock data
+  const [leagues, setLeagues] = useState([]);
+  const [filteredLeagues, setFilteredLeagues] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  // NEW: Loading state for better UX
+  const [loading, setLoading] = useState(true);
+  // NEW: Error state handling
+  const [error, setError] = useState(null);
   const { user } = useAuth();
+
+  // NEW: Fetch leagues from database on component mount
+  useEffect(() => {
+    const fetchLeagues = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const fetchedLeagues = await getLeagues();
+        setLeagues(fetchedLeagues);
+        setFilteredLeagues(fetchedLeagues);
+      } catch (err) {
+        console.error('Error fetching leagues:', err);
+        setError('Failed to load leagues. Please try again.');
+        // Fallback to empty array on error
+        setLeagues([]);
+        setFilteredLeagues([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeagues();
+  }, []);
 
   // Filter leagues based on search query and selected level
   useEffect(() => {
@@ -66,10 +46,9 @@ export default function DiscoverLeagues() {
     // Filter by search query (sport name)
     if (searchQuery.trim()) {
       filtered = filtered.filter(league =>
-        league.sport.toLowerCase().includes(searchQuery.toLowerCase())
+        league.league_name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
-
 
     setFilteredLeagues(filtered);
   }, [searchQuery, leagues]);
@@ -84,9 +63,17 @@ export default function DiscoverLeagues() {
           { 
             text: 'Join', 
             onPress: async () => {
-              // Uncomment when Firebase service is ready
-              // await joinLeague(leagueId, user.uid);
-              Alert.alert('Success', 'You have joined the league!');
+              try {
+                // CHANGED: Uncommented Firebase service call - now using real database
+                await joinLeague(leagueId, user.uid);
+                Alert.alert('Success', 'You have joined the league!');
+                // NEW: Refresh leagues after joining to update member count
+                const updatedLeagues = await getLeagues();
+                setLeagues(updatedLeagues);
+              } catch (joinError) {
+                console.error('Error joining league:', joinError);
+                Alert.alert('Error', 'Failed to join league. Please try again.');
+              }
             }
           }
         ]
@@ -96,7 +83,45 @@ export default function DiscoverLeagues() {
     }
   };
 
-  
+  // NEW: Loading state UI
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.loadingText}>Loading leagues...</Text>
+      </View>
+    );
+  }
+
+  // NEW: Error state UI
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={() => {
+            // Retry fetching leagues
+            const fetchLeagues = async () => {
+              try {
+                setLoading(true);
+                setError(null);
+                const fetchedLeagues = await getLeagues();
+                setLeagues(fetchedLeagues);
+                setFilteredLeagues(fetchedLeagues);
+              } catch (err) {
+                setError('Failed to load leagues. Please try again.');
+              } finally {
+                setLoading(false);
+              }
+            };
+            fetchLeagues();
+          }}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -109,20 +134,19 @@ export default function DiscoverLeagues() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by Activity (e.g., Basketball, Tennis)"
+          placeholder="Search by League Name (e.g., Basketball, Tennis)"
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#999"
         />
       </View>
-      
 
       {/* Results Count */}
       <View style={styles.resultsContainer}>
         <Text style={styles.resultsText}>
           {filteredLeagues.length} league{filteredLeagues.length !== 1 ? 's' : ''} found
         </Text>
-        {(searchQuery !== 'All') && (
+        {(searchQuery !== '') && (
           <TouchableOpacity 
             onPress={() => {
               setSearchQuery('');
@@ -142,24 +166,35 @@ export default function DiscoverLeagues() {
       ) : (
         filteredLeagues.map(league => (
           <View key={league.id} style={styles.leagueCard}>
-            <Text style={styles.leagueName}>{league.name}</Text>
-            <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text>
-            <Text style={styles.leagueInfo}>📍 Location: {league.location}</Text>
+            <Text style={styles.leagueName}>{league.league_name}</Text>
+            <Text style={styles.leagueInfo}>📍{league.location_str}</Text>
             <Text style={styles.leagueInfo}>
-              👥 Members: {league.members}/{league.maxMembers}
+              📅 {league.created_at.toDate().toLocaleDateString()} ➡️ {league.league_end.toDate().toLocaleDateString()}
             </Text>
-            <Text style={styles.leagueDescription}>{league.description}</Text>
+            
+            <Text style={styles.leagueInfo}>
+              👥 Members: {league.players.length}/{100}
+            </Text>
+            {/* <Text style={styles.leagueDescription}>{league.description}</Text> */}
             
             <TouchableOpacity
               style={[
                 styles.joinButton,
-                league.members >= league.maxMembers && styles.joinButtonDisabled
+                league.players.length >= 100 && styles.joinButtonDisabled
               ]}
               onPress={() => handleJoinLeague(league.id)}
-              disabled={league.members >= league.maxMembers}
+              disabled={league.players.length >= 100}
             >
               <Text style={styles.joinButtonText}>
-                {league.members >= league.maxMembers ? 'League Full' : 'Join League'}
+                {(() => {
+                  if (league.players.some(player => player.id === user.id)) {
+                    return 'Already Joined';
+                  } else if (league.players.length >= 100) {
+                    return 'League Full';
+                  } else {
+                    return 'Join League';
+                  }
+                })()}
               </Text>
             </TouchableOpacity>
           </View>
@@ -173,6 +208,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  // NEW: Center content style for loading and error states
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // NEW: Loading text style
+  loadingText: {
+    fontSize: 18,
+    color: '#666',
+    textAlign: 'center',
+  },
+  // NEW: Error text style
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  // NEW: Retry button styles
+  retryButton: {
+    backgroundColor: '#2f95dc',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
   },
   header: {
     backgroundColor: '#2f95dc',

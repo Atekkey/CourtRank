@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyProfile() {
   const { logout, user } = useAuth();
-
+  
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',

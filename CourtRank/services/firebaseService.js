@@ -27,7 +27,7 @@ export const registerPlayer = async (email, password, userData) => {
 
     // Add player profile to Firestore
     // uses player.uid as the document ID
-    await setDoc(doc(db, 'users', user.uid), {
+    await setDoc(doc(db, 'players', user.uid), {
       created_at: new Date(),
       email: user.email,
       first_name: userData.first_name,
