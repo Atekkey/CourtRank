@@ -23,6 +23,7 @@ import { db, auth } from './firebaseConfig';
 export const registerPlayer = async (email, password, userData) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log('REACH1');
     const user = userCredential.user;
 
     // Add player profile to Firestore
