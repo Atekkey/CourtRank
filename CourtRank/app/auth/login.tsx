@@ -80,6 +80,8 @@ export default function LoginScreen() {
               secureTextEntry
               autoCapitalize="none"
               placeholderTextColor="#999"
+              onSubmitEditing={handleLogin} // Added so you can press enter to login
+              returnKeyType="go" // This is a non-web thing
             />
           </View>
 
@@ -107,18 +109,6 @@ export default function LoginScreen() {
             disabled={loading}
           >
             <Text style={styles.registerButtonText}>Create New Account</Text>
-          </TouchableOpacity>
-
-          {/* Guest Mode Option */}
-          <TouchableOpacity
-            style={styles.guestButton}
-            onPress={() => {
-              // You can implement guest mode later
-              Alert.alert('Coming Soon', 'Guest mode will be available soon!');
-            }}
-            disabled={loading}
-          >
-            <Text style={styles.guestButtonText}>Continue as Guest</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

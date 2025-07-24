@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -54,32 +54,44 @@ export default function DiscoverLeagues() {
   }, [searchQuery, leagues]);
 
   const handleJoinLeague = async (leagueId) => {
-    try {
-      Alert.alert(
-        'Join League',
-        'Are you sure you want to join this league?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Join', 
-            onPress: async () => {
-              try {
-                // CHANGED: Uncommented Firebase service call - now using real database
-                await joinLeague(leagueId, user.uid);
-                Alert.alert('Success', 'You have joined the league!');
-                // NEW: Refresh leagues after joining to update member count
-                const updatedLeagues = await getLeagues();
-                setLeagues(updatedLeagues);
-              } catch (joinError) {
-                console.error('Error joining league:', joinError);
-                Alert.alert('Error', 'Failed to join league. Please try again.');
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to join this league?')) {
+        try {
+          await joinLeague(leagueId, user.uid);
+          Alert.alert('Success', 'You have joined the league!');
+          const updatedLeagues = await getLeagues();
+          setLeagues(updatedLeagues);
+        } catch (joinError) {
+          console.error('Error joining league:', joinError);
+          Alert.alert('Error', 'Failed to join league. Please try again.');
+        }
+      }
+    } else {
+      try {
+        Alert.alert(
+          'Join League',
+          'Are you sure you want to join this league?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Join', 
+              onPress: async () => {
+                try {
+                  await joinLeague(leagueId, user.uid);
+                  Alert.alert('Success', 'You have joined the league!');
+                  const updatedLeagues = await getLeagues();
+                  setLeagues(updatedLeagues);
+                } catch (joinError) {
+                  console.error('Error joining league:', joinError);
+                  Alert.alert('Error', 'Failed to join league. Please try again.');
+                }
               }
             }
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to join league. Please try again.');
+          ]
+        );
+      } catch (error) {
+        Alert.alert('Error', 'Failed to join league. Please try again.');
+      }
     }
   };
 
@@ -156,7 +168,7 @@ export default function DiscoverLeagues() {
           </TouchableOpacity>
         )}
       </View>
-
+      
       {/* Leagues List */}
       {filteredLeagues.length === 0 ? (
         <View style={styles.noResultsContainer}>
@@ -182,7 +194,7 @@ export default function DiscoverLeagues() {
                 styles.joinButton,
                 league.players.length >= 100 && styles.joinButtonDisabled
               ]}
-              onPress={() => handleJoinLeague(league.id)}
+              onPress={() => handleJoinLeague(league.league_id)}
               disabled={league.players.length >= 100}
             >
               <Text style={styles.joinButtonText}>
