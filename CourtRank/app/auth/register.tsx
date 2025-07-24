@@ -98,7 +98,7 @@ export default function RegisterScreen() {
   };
 
   const navigateToLogin = () => {
-    router.back();
+    router.replace('/auth/login');
   };
 
   return (
