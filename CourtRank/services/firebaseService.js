@@ -6,6 +6,7 @@ import {
   doc, 
   updateDoc, 
   deleteDoc,
+  getDoc,
   query,
   where,
   orderBy,
@@ -154,12 +155,22 @@ export const getUserLeagues = async (user_id) => {
   }
 };
 
+// User Functions for index.tsx
+export const getPlayerInfo = async (user_id) => {
+  try {
+    const userRef = doc(db, 'players', user_id);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists()) {
+      throw new Error('User not found');
+    }
+    return { user_id: userDoc.id, ...userDoc.data() };
+  } catch (error) {
+    throw error;
+  }
+};
 
 /////////////////// All Below Might be unnecessary
-
-
 // Match Functions
-
 export const createMatch = async (matchData) => {
   try {
     const docRef = await addDoc(collection(db, 'matches'), {

@@ -1,35 +1,90 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getPlayerInfo } from '../../services/firebaseService';
 
 export default function MyProfile() {
   const { logout, user } = useAuth();
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
+  // Fetch user info when component mounts or user changes
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        if (user?.uid) {
+          setLoading(true);
+          const user_info = await getPlayerInfo(user.uid);
+          console.log("User Info:", user_info.first_name);
+          setUserInfo(user_info);
+        }
+      } catch (err) {
+        console.error('Error fetching user info:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserInfo();
+  }, [user?.uid]); // Re-run when user ID changes
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to sign out?')) {
         logout();
       }
-  } else {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
+    } else {
+      Alert.alert(
+        'Sign Out',
+        'Are you sure you want to sign out?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Sign Out', 
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await logout();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to sign out. Please try again.');
+              }
             }
           }
-        }
-      ]
+        ]
+      );
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Profile</Text>
+        </View>
+        <View style={[styles.profileCard, styles.centerContent]}>
+          <ActivityIndicator size="large" color="#2f95dc" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </ScrollView>
     );
   }
-  };
+
+  // Show error state
+  if (error) {
+    return (
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>My Profile</Text>
+        </View>
+        <View style={styles.profileCard}>
+          <Text style={styles.errorText}>Error loading profile: {error}</Text>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -38,37 +93,14 @@ export default function MyProfile() {
       </View>
       
       <View style={styles.profileCard}>
-        <Text style={styles.playerName}>Alex Johnson</Text>
-        <Text style={styles.playerLevel}>Intermediate Player</Text>
-        <Text style={styles.playerLocation}>Toledo, Ohio</Text>
+        <Text style={styles.playerName}>
+          {userInfo?.first_name || "..."} {userInfo?.last_name || "..."}
+        </Text>
+        {/* <Text style={styles.playerLevel}></Text>
+        <Text style={styles.playerLocation}></Text> */}
         {user?.email && (
           <Text style={styles.playerEmail}>{user.email}</Text>
         )}
-      </View>
-      
-      <View style={styles.statsCard}>
-        <Text style={styles.cardTitle}>Career Stats</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>47</Text>
-            <Text style={styles.statLabel}>Matches</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>32</Text>
-            <Text style={styles.statLabel}>Wins</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>68%</Text>
-            <Text style={styles.statLabel}>Win Rate</Text>
-          </View>
-        </View>
-      </View>
-      
-      <View style={styles.achievementsCard}>
-        <Text style={styles.cardTitle}>Recent Achievements</Text>
-        <Text style={styles.achievementText}>🏆 Won Weekend Warriors League</Text>
-        <Text style={styles.achievementText}>🔥 5-match winning streak</Text>
-        <Text style={styles.achievementText}>📈 Improved ranking by 3 positions</Text>
       </View>
       
       <View style={styles.settingsCard}>
@@ -87,12 +119,12 @@ export default function MyProfile() {
         </TouchableOpacity>
       </View>
 
-      {/* Logout Section */}
       <View style={styles.logoutCard}>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
+
     </ScrollView>
   );
 }
@@ -116,84 +148,52 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     margin: 15,
     padding: 20,
-    borderRadius: 10,
-    alignItems: 'center',
+    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
   },
   playerName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2f95dc',
-    marginBottom: 5,
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 8,
   },
   playerLevel: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 5,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   playerLocation: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 5,
+    textAlign: 'center',
+    marginBottom: 4,
   },
   playerEmail: {
     fontSize: 14,
     color: '#999',
-    fontStyle: 'italic',
-  },
-  statsCard: {
-    backgroundColor: 'white',
-    margin: 15,
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2f95dc',
-    marginBottom: 15,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2f95dc',
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  achievementsCard: {
-    backgroundColor: 'white',
-    margin: 15,
-    padding: 20,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  achievementText: {
-    fontSize: 16,
-    marginVertical: 5,
-    color: '#333',
+    textAlign: 'center',
+    marginTop: 8,
   },
   settingsCard: {
     backgroundColor: 'white',
@@ -242,5 +242,11 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2f95dc',
+    marginBottom: 15,
   },
 });
