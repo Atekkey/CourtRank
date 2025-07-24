@@ -23,10 +23,11 @@ import { db, auth } from './firebaseConfig';
 
 // Auth Functions
 export const registerPlayer = async (email, password, userData) => {
+  let user = null;
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     console.log('REACH1');
-    const user = userCredential.user;
+    user = userCredential.user;
 
     // Add player profile to Firestore
     // uses player.uid as the document ID
@@ -41,6 +42,15 @@ export const registerPlayer = async (email, password, userData) => {
 
     return user;
   } catch (error) {
+      // Remove user from firestore database upon doc creation error
+      if (user) {
+        try {
+          await user.delete();
+          console.warn('Auth user deleted due to Firestore failure');
+        } catch (deleteError) {
+          console.error('Failed to delete user after Firestore failure:', deleteError);
+        }
+      }
     throw error;
   }
 };
