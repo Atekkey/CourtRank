@@ -10,7 +10,8 @@ import {
   query,
   where,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  setDoc
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, 
