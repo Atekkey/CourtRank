@@ -1,10 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyProfile() {
   const { logout, user } = useAuth();
   
   const handleLogout = () => {
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to sign out?')) {
+        logout();
+      }
+  } else {
     Alert.alert(
       'Sign Out',
       'Are you sure you want to sign out?',
@@ -23,6 +28,7 @@ export default function MyProfile() {
         }
       ]
     );
+  }
   };
 
   return (
