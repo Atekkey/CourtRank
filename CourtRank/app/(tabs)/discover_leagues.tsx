@@ -187,7 +187,7 @@ export default function DiscoverLeagues() {
             >
               <Text style={styles.joinButtonText}>
                 {(() => {
-                  if (league.players.some(player => player.id === user.id)) {
+                  if (user.uid && league.players.some(player => player.id === user.uid)) {
                     return 'Already Joined';
                   } else if (league.players.length >= 100) {
                     return 'League Full';
