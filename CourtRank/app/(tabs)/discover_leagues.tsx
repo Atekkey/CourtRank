@@ -181,7 +181,8 @@ export default function DiscoverLeagues() {
             <Text style={styles.leagueName}>{league.league_name}</Text>
             <Text style={styles.leagueInfo}>📍{league.location_str}</Text>
             <Text style={styles.leagueInfo}>
-              📅 {league.created_at.toDate().toLocaleDateString()} ➡️ {league.league_end.toDate().toLocaleDateString()}
+              📅 {league.created_at.toDate().toLocaleDateString()} ➡️ 
+              {league.league_end ? league.league_end.toDate().toLocaleDateString() : ''}
             </Text>
             
             <Text style={styles.leagueInfo}>

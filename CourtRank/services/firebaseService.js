@@ -82,19 +82,41 @@ export const getCurrentUser = () => {
 };
 
 // League Functions
-export const createLeague = async (leagueData) => {
+
+// Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
+export const createEmptyLeague = async (data={}) => {
+
+
+  let elo_array_ = [];
+  let players_ = [];
+  let whitelist_pids_ = [];
+  if (data.admin_pid && data.admin_pid.trim() !== '') {
+    elo_array_ = [{
+      pid: data.admin_pid,
+      elo: 800
+    }];
+    players_ = [data.admin_pid];
+    whitelist_pids_ = data.is_public ? [data.admin_pid] : [];
+  }
+
   try {
-    const docRef = await setDoc(doc(db, 'leagues', leagueData.id), {
-      ...leagueData, // puts all league data in here, not nested (like python **)
-      // admin_pid, is_public, league_end_date, league_name, league_k_factor
-      starting_elo: 800, // Default starting ELO rating
+    const customId = doc(collection(db, 'leagues')).id; // gen uniq id
+    await setDoc(doc(db, 'leagues', customId), {
+      admin_pid: data.admin_pid || '', // Needs init
+      league_k_factor: data.league_k_factor || 1,
+      is_public: data.is_public || true,
+      league_end_date: data.league_end_date || null,
+      league_name: data.league_name || 'New League',
+      starting_elo: 800,
       created_at: new Date(),
-      elo_array: [],
       matches: [],
-      whitelist_pids: [],
-      players: [], // Todo, init admin into everything
+      league_id: customId,
+
+      elo_array: elo_array_,
+      whitelist_pids: whitelist_pids_,
+      players: players_,
     });
-    return docRef.id;
+    return customId;
   } catch (error) {
     throw error;
   }
