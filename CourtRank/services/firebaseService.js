@@ -21,12 +21,12 @@ import {
 } from 'firebase/auth';
 import { db, auth } from './firebaseConfig';
 
+
 // Auth Functions
 export const registerPlayer = async (email, password, userData) => {
   let user = null;
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log('REACH1');
     user = userCredential.user;
 
     // Add player profile to Firestore
@@ -84,7 +84,7 @@ export const getCurrentUser = () => {
 // League Functions
 
 // Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
-export const createEmptyLeague = async (data={}) => {
+export const createLeague = async (data={}) => {
 
 
   let elo_array_ = [];
@@ -110,7 +110,10 @@ export const createEmptyLeague = async (data={}) => {
       starting_elo: 800,
       created_at: new Date(),
       matches: [],
+
       league_id: customId,
+      location: data.location || '',
+      description: data.description || '',
 
       elo_array: elo_array_,
       whitelist_pids: whitelist_pids_,
@@ -137,8 +140,10 @@ export const getLeagues = async () => {
 
 export const joinLeague = async (league_id, user_id) => {
   try {
+    console.log('Joining league:', league_id, 'for user:', user_id);
     const leagueRef = doc(db, 'leagues', league_id);
     const leagueDoc = await getDoc(leagueRef);
+    
     if (!leagueDoc.exists()) { throw new Error('League not found'); }
     const leagueData = leagueDoc.data();
     

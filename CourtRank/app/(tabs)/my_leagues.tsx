@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { getUserLeagues, leaveLeague } from '../../services/firebaseService';
+import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput  } from 'react-native';
+import { createLeague, getUserLeagues, leaveLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Mock data for demonstration (replace with real Firebase data)
+// Mock data
 const mockMyLeagues = [
   {
     id: '1',
@@ -60,7 +60,24 @@ const mockMyLeagues = [
 
 export default function MyLeagues() {
   const [myLeagues, setMyLeagues] = useState(mockMyLeagues);
-  const { user } = useAuth();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const { user, userInfo, isLoading } = useAuth();
+  const [newLeague, setNewLeague] = useState({
+    admin_pid: user?.uid,
+    league_k_factor: 40,
+    is_public: true,
+    league_end_date: null,
+    league_name: `${userInfo?.first_name}'s League`,
+    starting_elo: 800,
+    created_at: new Date(),
+    matches: [],
+    league_id: null,
+    elo_array: [],
+    whitelist_pids: [],
+    players: [],
+    description: "",
+  });
+  
 
   const handleLogGame = async (leagueId, leagueName) => {
     try {
@@ -107,6 +124,60 @@ export default function MyLeagues() {
       Alert.alert('Error', 'Failed to leave league. Please try again.');
     }
   };
+
+  const handleCreateLeague = async () => {
+    // Validate required fields
+    if (!newLeague.league_name.trim()) {
+      Alert.alert('Error', 'Please enter a league name.');
+      return;
+    }
+
+    try {
+      await createLeague(newLeague);
+      
+      setShowCreateModal(false);
+      
+      // Reset form
+      setNewLeague({
+        admin_pid: user?.uid,
+        league_k_factor: 40,
+        is_public: true,
+        league_end_date: null,
+        league_name: `${userInfo?.first_name}'s League`,
+        starting_elo: 800,
+        created_at: new Date(),
+        matches: [],
+        league_id: null,
+        elo_array: [],
+        whitelist_pids: [],
+        players: [],
+        description: "",
+      });
+
+      // Show success notification
+      if (Platform.OS === 'web') {
+        window.alert(`"${newLeague.league_name}" has been created successfully. You are now the league administrator.`);
+      } else {
+        Alert.alert(
+          'League Created! 🎉',
+          `"${newLeague.league_name}" has been created successfully. You are now the league administrator.`,
+          [
+            { 
+              text: 'Great!', 
+              style: 'default'
+            }
+          ]
+        );
+        }
+    } catch (error) {
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Failed to create league. Please try again.'`);
+      } else {
+        Alert.alert('Error', 'Failed to create league. Please try again.');
+      }
+    }
+  };
+
 
   const getRankColor = (rank) => {
     if (rank === 1) return '#FFD700'; // Gold
@@ -236,6 +307,129 @@ export default function MyLeagues() {
           </View>
         ))
       )}
+
+      {/* Create League POP UP */}
+      <Modal
+        visible={showCreateModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Create New League</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowCreateModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* League Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>League Name *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newLeague.league_name}
+                onChangeText={(text) => setNewLeague({...newLeague, league_name: text})}
+                placeholder="Enter league name"
+                maxLength={50}
+              />
+            </View>
+
+            {/* Location */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Location</Text>
+              <TextInput
+                style={styles.textInput}
+                value={newLeague.location}
+                onChangeText={(text) => setNewLeague({...newLeague, location: text})}
+                placeholder="Example: UIUC Tennis Courts (optional)"
+                maxLength={100}
+              />
+            </View>
+
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Description</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newLeague.description}
+                onChangeText={(text) => setNewLeague({...newLeague, description: text})}
+                placeholder="Enter a short league description (optional)"
+                multiline
+                numberOfLines={1}
+                maxLength={100}
+              />
+            </View>
+
+            {/* Privacy Setting */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>League Privacy *</Text>
+              <View style={styles.privacyOptions}>
+                <TouchableOpacity
+                  style={[
+                    styles.privacyOption,
+                    newLeague.isPublic && styles.privacyOptionSelected
+                  ]}
+                  onPress={() => setNewLeague({...newLeague, isPublic: true})}
+                >
+                  <Text style={[
+                    styles.privacyOptionText,
+                    newLeague.isPublic && styles.privacyOptionTextSelected
+                  ]}>
+                    🌐 Public
+                  </Text>
+                  <Text style={styles.privacyOptionSubtext}>Anyone can find and join</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.privacyOption,
+                    !newLeague.isPublic && styles.privacyOptionSelected
+                  ]}
+                  onPress={() => setNewLeague({...newLeague, isPublic: false})}
+                >
+                  <Text style={[
+                    styles.privacyOptionText,
+                    !newLeague.isPublic && styles.privacyOptionTextSelected
+                  ]}>
+                    🔒 Private
+                  </Text>
+                  <Text style={styles.privacyOptionSubtext}>Visible, but Invite required to join</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowCreateModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={handleCreateLeague}
+            >
+              <Text style={styles.createButtonText}>Create League</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <TouchableOpacity 
+        style={styles.createLeagueButton}
+        onPress={() => setShowCreateModal(true)}
+      >
+        <Text style={styles.createLeagueButtonText}>➕ Create New League</Text>
+      </TouchableOpacity>
+
     </ScrollView>
   );
 }
@@ -259,6 +453,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'white',
     marginTop: 5,
+  },
+  createLeagueButton: {
+    backgroundColor: '#4CAF50',
+    margin: 15,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  createLeagueButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   resultsContainer: {
     flexDirection: 'row',
@@ -437,5 +648,145 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#2f95dc',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  closeButton: {
+    padding: 5,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: 'white',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  sportSelector: {
+    flexDirection: 'row',
+  },
+  sportOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  sportOptionSelected: {
+    backgroundColor: '#2f95dc',
+    borderColor: '#2f95dc',
+  },
+  sportOptionText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  sportOptionTextSelected: {
+    color: 'white',
+  },
+  privacyOptions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  privacyOption: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#f8f9fa',
+    marginHorizontal: 5,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+  },
+  privacyOptionSelected: {
+    borderColor: '#2f95dc',
+    backgroundColor: '#e3f2fd',
+  },
+  privacyOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 4,
+  },
+  privacyOptionTextSelected: {
+    color: '#2f95dc',
+  },
+  privacyOptionSubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  createButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });

@@ -4,31 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo } from '../../services/firebaseService';
 
 export default function MyProfile() {
-  const { logout, user } = useAuth();
-  const [userInfo, setUserInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, userInfo, isLoading, logout } = useAuth();
   const [error, setError] = useState(null);
-  
-  // Fetch user info when component mounts or user changes
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        if (user?.uid) {
-          setLoading(true);
-          const user_info = await getPlayerInfo(user.uid);
-          console.log("User Info:", user_info.first_name);
-          setUserInfo(user_info);
-        }
-      } catch (err) {
-        console.error('Error fetching user info:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserInfo();
-  }, [user?.uid]); // Re-run when user ID changes
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -58,7 +35,7 @@ export default function MyProfile() {
   };
 
   // Show loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <ScrollView style={styles.container}>
         <View style={styles.header}>
@@ -96,8 +73,6 @@ export default function MyProfile() {
         <Text style={styles.playerName}>
           {userInfo?.first_name || "..."} {userInfo?.last_name || "..."}
         </Text>
-        {/* <Text style={styles.playerLevel}></Text>
-        <Text style={styles.playerLocation}></Text> */}
         {user?.email && (
           <Text style={styles.playerEmail}>{user.email}</Text>
         )}

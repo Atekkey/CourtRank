@@ -84,9 +84,10 @@ const mockUser = {
 };
 
 export default function Index() {
+  const { user, userInfo, isLoading, logout } = useAuth();
   const [announcements, setAnnouncements] = useState(mockAnnouncements);
-  const [user, setUser] = useState(mockUser);
-  const { user: authUser } = useAuth();
+  // const [user, setUser] = useState(mockUser);
+  // const { user: authUser } = useAuth();
 
   const chartConfig = {
   backgroundGradientFrom: '#ffffff',
@@ -95,7 +96,7 @@ export default function Index() {
   strokeWidth: 2,
   useShadowColorFromDataset: true, 
   decimalPlaces: 0,
-};
+  };
 
   const getAnnouncementIcon = (type) => {
     switch (type) {
@@ -130,27 +131,26 @@ export default function Index() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>CourtRank</Text>
-        <Text style={styles.subtitle}>Welcome back, {user.name}!</Text>
       </View>
 
       {/* Profile Section with Circular Banner */}
       <View style={styles.profileContainer}>
         <View style={styles.circularBanner}>
           <View style={styles.profileImageContainer}>
-            {user.profileImage ? (
-              <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
-            ) : (
-              <View style={styles.profileImagePlaceholder}>
-                <Text style={styles.profileImageText}>
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </Text>
-              </View>
-            )}
+              {userInfo?.profileImage ? (
+                <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profileImagePlaceholder}>
+                  <Text style={styles.profileImageText}>
+                    {userInfo?.first_name[0]}{userInfo?.last_name[0]}
+                  </Text>
+                </View>
+              )}
           </View>
         </View>
         
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileName}>{userInfo?.first_name || ""}</Text>
           <View style={styles.profileStats}>
             {/* <View style={styles.statItem}>
               <Text style={[styles.currentElo, { color: getEloColor(user.currentElo) }]}>
@@ -173,7 +173,7 @@ export default function Index() {
       {/* ELO Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.sectionTitle}>ELO History</Text>
-        <LineChart
+        {/* <LineChart
           data={mockEloData}
           width={screenWidth - 40}
           height={200}
@@ -185,15 +185,15 @@ export default function Index() {
           withInnerLines={true}
           withOuterLines={true}
           yAxisInterval={1}
-        />
+        /> */}
         {/* ELO Legend */}
         <View style={styles.legendContainer}>
-        {eloLegend.map((item, index) => (
+        {/* {eloLegend.map((item, index) => (
           <View key={index} style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: item.color }]} />
             <Text style={styles.legendText}>{item.name}</Text>
           </View>
-        ))}
+        ))} */}
       </View>
       </View>
 

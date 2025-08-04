@@ -10,11 +10,9 @@ export default function DiscoverLeagues() {
   const [leagues, setLeagues] = useState([]);
   const [filteredLeagues, setFilteredLeagues] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  // NEW: Loading state for better UX
   const [loading, setLoading] = useState(true);
-  // NEW: Error state handling
   const [error, setError] = useState(null);
-  const { user } = useAuth();
+  const { user, userInfo, isLoading } = useAuth();
 
   // NEW: Fetch leagues from database on component mount
   useEffect(() => {
@@ -179,31 +177,29 @@ export default function DiscoverLeagues() {
         filteredLeagues.map(league => (
           <View key={league.id} style={styles.leagueCard}>
             <Text style={styles.leagueName}>{league.league_name}</Text>
-            <Text style={styles.leagueInfo}>📍{league.location_str}</Text>
+            {league.description && <Text style={styles.leagueDescription}>{league.description}</Text>}
+            {league.location_str && <Text style={styles.leagueInfo}>📍{league.location_str}</Text>}
             <Text style={styles.leagueInfo}>
               📅 {league.created_at.toDate().toLocaleDateString()} ➡️ 
-              {league.league_end ? league.league_end.toDate().toLocaleDateString() : ''}
+              {league.league_end ? league.league_end.toDate().toLocaleDateString() : '♾️'}
             </Text>
             
             <Text style={styles.leagueInfo}>
-              👥 Members: {league.players.length}/{100}
+              👥 Members: {league.players.length}
             </Text>
-            {/* <Text style={styles.leagueDescription}>{league.description}</Text> */}
             
             <TouchableOpacity
               style={[
                 styles.joinButton,
-                league.players.length >= 100 && styles.joinButtonDisabled
+                styles.joinButtonDisabled
               ]}
               onPress={() => handleJoinLeague(league.league_id)}
-              disabled={league.players.length >= 100}
+              disabled={league.players.some(player => player === user.uid)}
             >
               <Text style={styles.joinButtonText}>
                 {(() => {
-                  if (user.uid && league.players.some(player => player.id === user.uid)) {
+                  if (user.uid && league.players.some(player => player === user.uid)) {
                     return 'Already Joined';
-                  } else if (league.players.length >= 100) {
-                    return 'League Full';
                   } else {
                     return 'Join League';
                   }
@@ -368,8 +364,9 @@ const styles = StyleSheet.create({
   leagueDescription: {
     fontSize: 14,
     color: '#888',
-    marginTop: 8,
+    marginTop: -6,
     fontStyle: 'italic',
+    marginLeft: 3,
   },
   joinButton: {
     backgroundColor: '#4CAF50',
