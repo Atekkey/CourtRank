@@ -11,7 +11,8 @@ import {
   where,
   orderBy,
   onSnapshot,
-  setDoc
+  setDoc,
+  arrayUnion
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, 
@@ -36,7 +37,7 @@ export const registerPlayer = async (email, password, userData) => {
       email: user.email,
       first_name: userData.first_name,
       last_name: userData.last_name,
-      elo_array: [],
+      league_info: [],
       // Note, player_id not stored bc it is docID
     });
 
@@ -86,16 +87,8 @@ export const getCurrentUser = () => {
 // Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
 export const createLeague = async (data={}) => {
 
-
-  let elo_array_ = [];
-  let players_ = [];
   let whitelist_pids_ = [];
   if (data.admin_pid && data.admin_pid.trim() !== '') {
-    elo_array_ = [{
-      pid: data.admin_pid,
-      elo: 800
-    }];
-    players_ = [data.admin_pid];
     whitelist_pids_ = data.is_public ? [data.admin_pid] : [];
   }
 
@@ -103,7 +96,7 @@ export const createLeague = async (data={}) => {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
       admin_pid: data.admin_pid || '', // Needs init
-      league_k_factor: data.league_k_factor || 1,
+      league_k_factor: data.league_k_factor || 40,
       is_public: data.is_public || true,
       league_end_date: data.league_end_date || null,
       league_name: data.league_name || 'New League',
@@ -115,14 +108,18 @@ export const createLeague = async (data={}) => {
       location: data.location || '',
       description: data.description || '',
 
-      elo_array: elo_array_,
+      elo_info: {},
       whitelist_pids: whitelist_pids_,
-      players: players_,
+      players: [],
     });
+    // Add admin to players and elo_info
+    await joinLeague(customId, data.admin_pid);
+
     return customId;
   } catch (error) {
     throw error;
   }
+
 };
 
 export const getLeagues = async () => {
@@ -159,18 +156,46 @@ export const joinLeague = async (league_id, user_id) => {
     }
 
     // Add user to the league's players array
-    await updateDoc(leagueRef, {
+    await setDoc(leagueRef, {
       players: arrayUnion(user_id),
-      elo_array: arrayUnion({ // USER LEAGUE DATA. TODO: Should this be a separate collection??
-        user_id: user_id,
-        elo: leagueData.starting_elo || 800, // takes 800 if starting elo DNE
-        wins: 0,
-        losses: 0,
-        ties: 0
-      })
-    });
+      elo_info: {
+        [user_id]: {
+          elo: leagueData.starting_elo || 800,
+          wins: 0,
+          losses: 0,
+          ties: 0
+        }
+      }
+    }, { merge: true });
     
     return { success: true, message: 'Successfully joined the league' };
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const leaveLeague = async (league_id, user_id) => {
+  try {
+    const leagueRef = doc(db, 'leagues', league_id);
+    const leagueDoc = await getDoc(leagueRef);
+    if (!leagueDoc.exists()) {
+      throw new Error('League not found');
+    }
+
+    const leagueData = leagueDoc.data();
+    if (!leagueData.players || !leagueData.players.includes(user_id)) {
+      throw new Error('You are not a member of this league');
+    }
+
+    // Remove user from the league's players array
+    await setDoc(leagueRef, {
+      players: arrayRemove(user_id),
+      elo_info: {
+        [user_id]: deleteField()
+      }
+    }, { merge: true });
+
+    return { success: true, message: 'Successfully left the league' };
   } catch (error) {
     throw error;
   }

@@ -3,63 +3,8 @@ import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, 
 import { createLeague, getUserLeagues, leaveLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
-// Mock data
-const mockMyLeagues = [
-  {
-    id: '1',
-    name: 'Downtown Basketball League',
-    sport: 'Basketball',
-    location: 'Downtown Community Center',
-    members: 24,
-    maxMembers: 30,
-    description: 'Competitive basketball league',
-    userStats: {
-      rank: 3,
-      elo: 1847,
-      wins: 12,
-      losses: 4,
-      ties: 2,
-      gamesPlayed: 18
-    }
-  },
-  {
-    id: '2',
-    name: 'Riverside Tennis Club',
-    sport: 'Tennis',
-    location: 'Riverside Park',
-    members: 12,
-    maxMembers: 20,
-    description: 'Friendly tennis matches',
-    userStats: {
-      rank: 7,
-      elo: 1324,
-      wins: 8,
-      losses: 6,
-      ties: 0,
-      gamesPlayed: 14
-    }
-  },
-  {
-    id: '3',
-    name: 'Morning Volleyball League',
-    sport: 'Volleyball',
-    location: 'Beach Courts',
-    members: 18,
-    maxMembers: 24,
-    description: 'Early morning volleyball matches',
-    userStats: {
-      rank: 1,
-      elo: 2103,
-      wins: 15,
-      losses: 2,
-      ties: 1,
-      gamesPlayed: 18
-    }
-  }
-];
-
 export default function MyLeagues() {
-  const [myLeagues, setMyLeagues] = useState(mockMyLeagues);
+  const [myLeagues, setMyLeagues] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const { user, userInfo, isLoading } = useAuth();
   const [newLeague, setNewLeague] = useState({
@@ -80,48 +25,40 @@ export default function MyLeagues() {
   
 
   const handleLogGame = async (leagueId, leagueName) => {
-    try {
-      Alert.alert(
-        'Log Game',
-        `Record a game result for "${leagueName}"`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Log Game', 
-            onPress: () => {
-              // Navigate to game logging screen or show modal
-              // For now, just show a success message
-              Alert.alert('Coming Soon', 'Game logging feature will be implemented soon!');
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to log game. Please try again.');
-    }
+    return; // TODO
   };
 
   const handleLeaveLeague = async (leagueId, leagueName) => {
     try {
-      Alert.alert(
-        'Leave League',
-        `Are you sure you want to leave "${leagueName}"?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Leave', 
-            style: 'destructive',
-            onPress: async () => {
-              // Uncomment when Firebase service is ready
-              // await leaveLeague(leagueId, user.uid);
-              setMyLeagues(prev => prev.filter(league => league.id !== leagueId));
-              Alert.alert('Success', 'You have left the league.');
+      var proceed = false;
+      if (Platform.OS === 'web') {
+        proceed = window.confirm(`Leave ${leagueName}?`);
+      } else {
+        Alert.alert(
+          'Leave League',
+          `Are you sure you want to leave "${leagueName}"?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Leave', 
+              style: 'destructive',
+              onPress: async () => {
+                proceed = true;
+              }
             }
-          }
-        ]
-      );
+          ]
+        );
+      }
+      // TODO: Act leave league if proceed is true
+      if (!proceed) return;
+      await leaveLeague(leagueId, user?.uid);
+
     } catch (error) {
-      Alert.alert('Error', 'Failed to leave league. Please try again.');
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Failed to leave league. Please try again.' ${error.message}`);
+      } else {
+        Alert.alert('Error', `Failed to leave league. Please try again. ${error.message}`);
+      }
     }
   };
 
@@ -199,117 +136,131 @@ export default function MyLeagues() {
     return ((wins + ties * 0.5) / total * 100).toFixed(1);
   };
 
-  const toggleFilter = (filter) => {
-    setSelectedFilter(selectedFilter === filter ? 'All' : filter);
-  };
+  useEffect(() => {
+    // Fetch user's leagues from backend
+    const fetchMyLeagues = async () => {
+      try {
+        const leagues = await getUserLeagues(user?.uid);
+        setMyLeagues(leagues);
+      } catch (error) {
+        console.error('Error fetching my leagues:', error);
+      }
+    };
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Leagues</Text>
-        <Text style={styles.subtitle}>Track your performance and rankings</Text>
+    fetchMyLeagues();
+  }, [user?.uid]);
+
+  const header = (
+    <View style={styles.header}>
+      <Text style={styles.title}>My Leagues</Text>
+      <Text style={styles.subtitle}>Track your performance and rankings</Text>
+    </View>
+  );
+
+  const resultsCount = (
+    <View style={styles.resultsContainer}>
+      <Text style={styles.resultsText}>
+        {myLeagues.length} league{myLeagues.length !== 1 ? 's' : ''} joined
+      </Text>
+    </View>
+  );
+
+  const noLeagues = (
+    <View style={styles.noResultsContainer}>
+      <Text style={styles.noResultsText}>No leagues found</Text>
+      <Text style={styles.noResultsSubtext}>
+        Join some leagues to see them here!
+      </Text>
+    </View>
+  );
+
+  const leagueCards = myLeagues.map(league => { 
+    const stats = league?.elo_info[user?.uid];
+    const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
+    return (
+    <View key={league.id} style={styles.leagueCard}>
+      <View style={styles.leagueHeader}>
+        <Text style={styles.leagueName}>{league.league_name}</Text>
+        {/* <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
+          <Text style={styles.rankText}>#{league.userStats.rank}</Text>
+        </View> */}
       </View>
+      
+      {/* <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text> */}
+      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
+      <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
-      {/* Results Count */}
-      <View style={styles.resultsContainer}>
-        <Text style={styles.resultsText}>
-          {myLeagues.length} league{myLeagues.length !== 1 ? 's' : ''} joined
-        </Text>
-      </View>
-
-      {/* Leagues List */}
-      {myLeagues.length === 0 ? (
-        <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>No leagues found</Text>
-          <Text style={styles.noResultsSubtext}>
-            Join some leagues to see them here!
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>ELO Rating</Text>
+          <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
+            {stats?.elo || ""}
           </Text>
         </View>
-      ) : (
-        myLeagues.map(league => (
-          <View key={league.id} style={styles.leagueCard}>
-            <View style={styles.leagueHeader}>
-              <Text style={styles.leagueName}>{league.name}</Text>
-              <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
-                <Text style={styles.rankText}>#{league.userStats.rank}</Text>
-              </View>
-            </View>
-            
-            <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text>
-            <Text style={styles.leagueInfo}>📍 Location: {league.location}</Text>
-            <Text style={styles.leagueDescription}>{league.description}</Text>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Win Rate</Text>
+          <Text style={styles.statValue}>
+            {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
+          </Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Games</Text>
+          <Text style={styles.statValue}>{numGames}</Text>
+        </View>
+      </View>
 
-            {/* Stats Section */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>ELO Rating</Text>
-                <Text style={[styles.statValue, { color: getEloColor(league.userStats.elo) }]}>
-                  {league.userStats.elo}
-                </Text>
-              </View>
-              
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Win Rate</Text>
-                <Text style={styles.statValue}>
-                  {getWinRate(league.userStats.wins, league.userStats.losses, league.userStats.ties)}%
-                </Text>
-              </View>
-              
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Games</Text>
-                <Text style={styles.statValue}>{league.userStats.gamesPlayed}</Text>
-              </View>
-            </View>
+      {/* W-T-L Record */}
+      <View style={styles.recordContainer}>
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
+          <Text style={styles.recordLabel}>Wins</Text>
+        </View>
+        <View style={styles.recordSeparator} />
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.ties ?? 0}</Text>
+          <Text style={styles.recordLabel}>Ties</Text>
+        </View>
+        <View style={styles.recordSeparator} />
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.losses ?? 0}</Text>
+          <Text style={styles.recordLabel}>Losses</Text>
+        </View>
+      </View>
 
-            {/* W-T-L Record */}
-            <View style={styles.recordContainer}>
-              <View style={styles.recordItem}>
-                <Text style={styles.recordNumber}>{league.userStats.wins}</Text>
-                <Text style={styles.recordLabel}>Wins</Text>
-              </View>
-              <View style={styles.recordSeparator} />
-              <View style={styles.recordItem}>
-                <Text style={styles.recordNumber}>{league.userStats.ties}</Text>
-                <Text style={styles.recordLabel}>Ties</Text>
-              </View>
-              <View style={styles.recordSeparator} />
-              <View style={styles.recordItem}>
-                <Text style={styles.recordNumber}>{league.userStats.losses}</Text>
-                <Text style={styles.recordLabel}>Losses</Text>
-              </View>
-            </View>
+      {/* Log Game Button */}
+      <TouchableOpacity 
+        style={styles.logGameButton}
+        onPress={() => handleLogGame(league.id, league.league_name)}
+      >
+        <Text style={styles.logGameButtonText}>📊 Log Game</Text>
+      </TouchableOpacity>
 
-            {/* Log Game Button */}
-            <TouchableOpacity 
-              style={styles.logGameButton}
-              onPress={() => handleLogGame(league.id, league.name)}
-            >
-              <Text style={styles.logGameButtonText}>📊 Log Game</Text>
-            </TouchableOpacity>
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>Match History</Text>
+        </TouchableOpacity>
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.viewButton}>
-                <Text style={styles.viewButtonText}>Match History</Text>
-              </TouchableOpacity>
+        <TouchableOpacity style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>Leaderboard</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.leaveButton}
+          onPress={() => handleLeaveLeague(league.id, league.league_name)}
+        >
+          <Text style={styles.leaveButtonText}>Leave League</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+    )
+  });
 
-              <TouchableOpacity style={styles.viewButton}>
-                <Text style={styles.viewButtonText}>Leaderboard</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.leaveButton}
-                onPress={() => handleLeaveLeague(league.id, league.name)}
-              >
-                <Text style={styles.leaveButtonText}>Leave League</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))
-      )}
-
-      {/* Create League POP UP */}
-      <Modal
+  const createLeagueModal = (
+    <Modal
         visible={showCreateModal}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -422,6 +373,15 @@ export default function MyLeagues() {
           </View>
         </View>
       </Modal>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      {header}
+      {resultsCount}
+      {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
+
+      {createLeagueModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}

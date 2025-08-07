@@ -3,10 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
-// REMOVED: Mock data - now fetching from database
-
 export default function DiscoverLeagues() {
-  // CHANGED: Initialize with empty array instead of mock data
   const [leagues, setLeagues] = useState([]);
   const [filteredLeagues, setFilteredLeagues] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +49,14 @@ export default function DiscoverLeagues() {
   }, [searchQuery, leagues]);
 
   const handleJoinLeague = async (leagueId) => {
+    if (!user || !user.uid) {
+      if (Platform.OS === 'web') {
+        window.alert('You must be logged in to join a league');
+        return;
+      }
+      Alert.alert('Error', 'You must be logged in to join a league');
+      return;
+    }
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to join this league?')) {
         try {
@@ -191,7 +196,7 @@ export default function DiscoverLeagues() {
             <TouchableOpacity
               style={[
                 styles.joinButton,
-                styles.joinButtonDisabled
+                league.players.some(player => player === user.uid) && styles.joinButtonDisabled
               ]}
               onPress={() => handleJoinLeague(league.league_id)}
               disabled={league.players.some(player => player === user.uid)}
