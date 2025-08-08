@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput  } from 'react-native';
+import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
 import { createLeague, getUserLeagues, leaveLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
   const [myLeagues, setMyLeagues] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [lbLeague, setLbLeague] = useState(null);
   const { user, userInfo, isLoading } = useAuth();
   const [newLeague, setNewLeague] = useState({
     admin_pid: user?.uid,
@@ -127,17 +129,21 @@ export default function MyLeagues() {
 
 
   const getRankColor = (rank) => {
-    if (rank === 1) return '#FFD700'; // Gold
-    if (rank <= 3) return '#C0C0C0'; // Silver
-    if (rank <= 5) return '#CD7F32'; // Bronze
-    return '#666'; // Default
+    if (rank === 1) return '#FFD700'; 
+    if (rank === 2) return '#C0C0C0'; 
+    if (rank === 3) return '#CD7F32';
+    if (rank <= 5) return '#934a26ff';
+    if (rank <= 10) return '#5c4336ff';
+    return '#2b2b2bff'; // Default
   };
 
   const getEloColor = (elo) => {
-    if (elo >= 2000) return '#4CAF50'; // Green for high ELO
-    if (elo >= 1600) return '#FF9800'; // Orange for medium ELO
-    if (elo >= 1200) return '#2196F3'; // Blue for decent ELO
-    return '#666'; // Gray for low ELO
+    if (elo >= 1400) return '#32f04eff';
+    if (elo >= 1200) return '#af7febff';
+    if (elo >= 1000) return '#45f6e7ff';
+    if (elo >= 900) return '#3b99e6ff'; 
+    if (elo >= 700) return '#8f9b6cff'; 
+    return '#666';
   };
 
   const getWinRate = (wins, losses, ties) => {
@@ -169,13 +175,8 @@ export default function MyLeagues() {
 
   const resultsCount = (
     <View style={styles.resultsContainer}>
-      <TouchableOpacity 
-        onPress={handleRefresh}
-      >
+      <TouchableOpacity onPress={handleRefresh} >
         <Text style={[styles.refreshButtonText]}>🔄</Text>
-        {/* <Text style={[styles.refreshButtonText, refreshing && styles.refreshingText]}>
-          {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
-        </Text> */}
       </TouchableOpacity>
 
       <Text style={styles.resultsText}>
@@ -193,6 +194,11 @@ export default function MyLeagues() {
       </Text>
     </View>
   );
+
+  const lbPressed = (league) => {
+    setLbLeague(league);
+    setShowLeaderboardModal(true);
+  };
 
   const leagueCards = myLeagues.map(league => { 
     const stats = league?.elo_info[user?.uid];
@@ -265,7 +271,7 @@ export default function MyLeagues() {
           <Text style={styles.viewButtonText}>Match History</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.viewButton}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
           <Text style={styles.viewButtonText}>Leaderboard</Text>
         </TouchableOpacity>
         
@@ -279,6 +285,52 @@ export default function MyLeagues() {
     </View>
     )
   });
+
+  const getSortedLeaderboard = () => {
+    if (!lbLeague) return [];
+    const out = Object.entries(lbLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
+    console.log(out);
+    return out;
+  };
+
+  const leaderboardMap = (lbLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
+    const name = pInfo.first_name + " " + pInfo.last_name;
+    const rank = i + 1;
+    const elo = pInfo.elo;
+    return (
+      <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
+        <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
+        <Text style={[styles.name]}>{name}</Text>
+        <Text style={[styles.elo, { color: getEloColor(elo || 0) }]}>{elo}</Text>
+      </View>
+    );
+  }) : null;
+
+  const createLeaderboardModal = (
+    <Modal
+        visible={showLeaderboardModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLeaderboardModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Leaderboard</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowLeaderboardModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {leaderboardMap}
+          </ScrollView>
+
+        </View>
+      </Modal>
+  );
 
   const createLeagueModal = (
     <Modal
@@ -403,6 +455,7 @@ export default function MyLeagues() {
       {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
 
       {createLeagueModal}
+      {createLeaderboardModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -416,6 +469,27 @@ export default function MyLeagues() {
 }
 
 const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  rank: {
+    width: 40,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  name: {
+    flex: 1, 
+    paddingHorizontal: 8,
+  },
+  elo: {
+    width: 60,
+    textAlign: 'right',
+    fontWeight: '600',
+  },
   refreshButtonText:{
     fontSize: 32,
   },

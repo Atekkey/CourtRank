@@ -171,11 +171,16 @@ export const getLeagues = async () => {
 export const joinLeague = async (league_id, user_id) => {
   try {
     console.log('Joining league:', league_id, 'for user:', user_id);
+
     const leagueRef = doc(db, 'leagues', league_id);
     const leagueDoc = await getDoc(leagueRef);
-    
     if (!leagueDoc.exists()) { throw new Error('League not found'); }
     const leagueData = leagueDoc.data();
+
+    const playerRef = doc(db, 'players', user_id);
+    const playerDoc = await getDoc(playerRef);
+    if (!playerDoc.exists()) { throw new Error('User not found'); }
+    const playerData = playerDoc.data();
     
     if (!leagueData.is_public) {
       // League is private... Check if user is in whitelist. Confirms not empty first
@@ -196,7 +201,9 @@ export const joinLeague = async (league_id, user_id) => {
           elo: leagueData.starting_elo || 800,
           wins: 0,
           losses: 0,
-          ties: 0
+          ties: 0,
+          first_name: playerData.first_name || '',
+          last_name: playerData.last_name || ''
         }
       }
     }, { merge: true });
