@@ -7,7 +7,8 @@ export default function MyLeagues() {
   const [myLeagues, setMyLeagues] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
-  const [lbLeague, setLbLeague] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [curLeague, setCurLeague] = useState(null);
   const { user, userInfo, isLoading } = useAuth();
   const [newLeague, setNewLeague] = useState({
     admin_pid: user?.uid,
@@ -24,11 +25,14 @@ export default function MyLeagues() {
     players: [],
     description: "",
   });
-  
-
-  const handleLogGame = async (leagueId, leagueName) => {
-    return; // TODO
-  };
+  // Log & Search
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState([]);
+  const players = curLeague ? Object.entries(curLeague.elo_info) : [];
+  const filteredPlayers = players.filter(
+    ([id, info]) => 
+    `${info.first_name} ${info.last_name}`.toLowerCase().includes(search.toLowerCase()) 
+  );
 
   const handleRefresh = async () => {
     try {
@@ -74,60 +78,7 @@ export default function MyLeagues() {
     }
   };
 
-  const handleCreateLeague = async () => {
-    // Validate required fields
-    if (!newLeague.league_name.trim()) {
-      Alert.alert('Error', 'Please enter a league name.');
-      return;
-    }
-
-    try {
-      await createLeague(newLeague);
-      
-      setShowCreateModal(false);
-      
-      // Reset form
-      setNewLeague({
-        admin_pid: user?.uid,
-        league_k_factor: 40,
-        is_public: true,
-        league_end_date: null,
-        league_name: `${userInfo?.first_name}'s League`,
-        starting_elo: 800,
-        created_at: new Date(),
-        matches: [],
-        league_id: null,
-        elo_array: [],
-        whitelist_pids: [],
-        players: [],
-        description: "",
-      });
-
-      // Show success notification
-      if (Platform.OS === 'web') {
-        window.alert(`"${newLeague.league_name}" has been created successfully. You are now the league administrator.`);
-      } else {
-        Alert.alert(
-          'League Created! 🎉',
-          `"${newLeague.league_name}" has been created successfully. You are now the league administrator.`,
-          [
-            { 
-              text: 'Great!', 
-              style: 'default'
-            }
-          ]
-        );
-        }
-    } catch (error) {
-      if (Platform.OS === 'web') {
-        window.alert(`'Error', 'Failed to create league. Please try again.'`);
-      } else {
-        Alert.alert('Error', 'Failed to create league. Please try again.');
-      }
-    }
-  };
-
-
+  // Small Helpers FXNs
   const getRankColor = (rank) => {
     if (rank === 1) return '#FFD700'; 
     if (rank === 2) return '#C0C0C0'; 
@@ -166,6 +117,7 @@ export default function MyLeagues() {
     fetchMyLeagues();
   }, [user?.uid]);
 
+  // Header Displays
   const header = (
     <View style={styles.header}>
       <Text style={styles.title}>My Leagues</Text>
@@ -195,9 +147,17 @@ export default function MyLeagues() {
     </View>
   );
 
+  // LEADERBOARD FXNS
   const lbPressed = (league) => {
-    setLbLeague(league);
+    setCurLeague(league);
     setShowLeaderboardModal(true);
+  };
+
+  const getSortedLeaderboard = () => {
+    if (!curLeague) return [];
+    const out = Object.entries(curLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
+    console.log(out);
+    return out;
   };
 
   const leagueCards = myLeagues.map(league => { 
@@ -260,7 +220,7 @@ export default function MyLeagues() {
       {/* Log Game Button */}
       <TouchableOpacity 
         style={styles.logGameButton}
-        onPress={() => handleLogGame(LID, league.league_name)}
+        onPress={() => logPressed(league)}
       >
         <Text style={styles.logGameButtonText}>📊 Log Game</Text>
       </TouchableOpacity>
@@ -286,14 +246,7 @@ export default function MyLeagues() {
     )
   });
 
-  const getSortedLeaderboard = () => {
-    if (!lbLeague) return [];
-    const out = Object.entries(lbLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
-    console.log(out);
-    return out;
-  };
-
-  const leaderboardMap = (lbLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
+  const leaderboardMap = (curLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
     const name = pInfo.first_name + " " + pInfo.last_name;
     const rank = i + 1;
     const elo = pInfo.elo;
@@ -306,7 +259,7 @@ export default function MyLeagues() {
     );
   }) : null;
 
-  const createLeaderboardModal = (
+  const leaderboardModal = (
     <Modal
         visible={showLeaderboardModal}
         animationType="slide"
@@ -331,6 +284,60 @@ export default function MyLeagues() {
         </View>
       </Modal>
   );
+
+  // CREATING A LEAGUE
+  const handleCreateLeague = async () => {
+    // Validate required fields
+    if (!newLeague.league_name.trim()) {
+      Alert.alert('Error', 'Please enter a league name.');
+      return;
+    }
+
+    try {
+      await createLeague(newLeague);
+      
+      setShowCreateModal(false);
+      
+      // Reset form
+      setNewLeague({
+        admin_pid: user?.uid,
+        league_k_factor: 40,
+        is_public: true,
+        league_end_date: null,
+        league_name: `${userInfo?.first_name}'s League`,
+        starting_elo: 800,
+        created_at: new Date(),
+        matches: [],
+        league_id: null,
+        elo_array: [],
+        whitelist_pids: [],
+        players: [],
+        description: "",
+      });
+
+      // Show success notification
+      if (Platform.OS === 'web') {
+        window.alert(`"${newLeague.league_name}" has been created successfully. You are now the league administrator.`);
+      } else {
+        Alert.alert(
+          'League Created! 🎉',
+          `"${newLeague.league_name}" has been created successfully. You are now the league administrator.`,
+          [
+            { 
+              text: 'Great!', 
+              style: 'default'
+            }
+          ]
+        );
+        }
+    } catch (error) {
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Failed to create league. Please try again.'`);
+      } else {
+        Alert.alert('Error', 'Failed to create league. Please try again.');
+      }
+    }
+  };
 
   const createLeagueModal = (
     <Modal
@@ -448,6 +455,96 @@ export default function MyLeagues() {
       </Modal>
   );
 
+  // LOG FXNS
+  const logPressed = (league) => {
+    setCurLeague(league);
+    setShowLogModal(true);
+  };
+  
+  const handleLogGame = async (leagueId, leagueName) => {
+    return; // TODO
+  };
+
+  const toggleSelect = (id) => {
+    setSelected(
+      prev =>
+      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
+    );
+  };
+
+
+  const logModal = (
+    <Modal
+        visible={showLogModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowLogModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Log Game</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowLogModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={{ flex: 1 }}>
+              {/* Search Bar */}
+              <TextInput
+                style={[styles.searchBar, {color: '#666666'}]}
+                placeholder="Search players..."
+                value={search}
+                onChangeText={setSearch}
+              />
+
+              {/* Player List */}
+              <FlatList
+                data={filteredPlayers}
+                keyExtractor={([id]) => id}
+                renderItem={({ item: [id, info] }) => {
+                  const name = `${info.first_name} ${info.last_name}`;
+                  const isSelected = selected.includes(id);
+                  const elo = info.elo;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => toggleSelect(id)}
+                      style={[styles.row, isSelected && styles.selectedRow]}
+                    >
+                      <Text style={styles.name}>    {name}</Text>
+                      <Text style={styles.elo}>{elo}    </Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => setShowLogModal(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={handleLogGame}
+            >
+              <Text style={styles.createButtonText}>Log Game</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+  );
+
+
+
   return (
     <ScrollView style={styles.container}>
       {header}
@@ -455,7 +552,8 @@ export default function MyLeagues() {
       {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
 
       {createLeagueModal}
-      {createLeaderboardModal}
+      {leaderboardModal}
+      {logModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -846,5 +944,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  searchBar: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    margin: 10,
+  },
+  selectedRow: {
+    backgroundColor: '#d0f0d0', // light green for selected
   },
 });
