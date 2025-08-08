@@ -68,6 +68,7 @@ export default function MyLeagues() {
       // TODO: Act leave league if proceed is true
       if (!proceed) return;
       await leaveLeague(leagueId, user?.uid);
+      handleRefresh();
 
     } catch (error) {
       if (Platform.OS === 'web') {
@@ -254,7 +255,7 @@ export default function MyLeagues() {
       <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
         <Text style={[styles.name]}>{name}</Text>
-        <Text style={[styles.elo, { color: getEloColor(elo || 0) }]}>{elo}</Text>
+        <Text style={[styles.elo, { color: getEloColor(elo || 0) }]}>{elo}    </Text>
       </View>
     );
   }) : null;
