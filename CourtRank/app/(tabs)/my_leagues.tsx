@@ -28,6 +28,16 @@ export default function MyLeagues() {
     return; // TODO
   };
 
+  const handleRefresh = async () => {
+    try {
+      const leagues = await getUserLeagues(user?.uid);
+      setMyLeagues(leagues);
+    } catch (error) {
+      console.error('Error fetching my leagues:', error);
+    }
+    return; // TODO
+  };
+
   const handleLeaveLeague = async (leagueId, leagueName) => {
     try {
       var proceed = false;
@@ -159,10 +169,20 @@ export default function MyLeagues() {
 
   const resultsCount = (
     <View style={styles.resultsContainer}>
+      <TouchableOpacity 
+        onPress={handleRefresh}
+      >
+        <Text style={[styles.refreshButtonText]}>🔄</Text>
+        {/* <Text style={[styles.refreshButtonText, refreshing && styles.refreshingText]}>
+          {refreshing ? '🔄 Refreshing...' : '🔄 Refresh'}
+        </Text> */}
+      </TouchableOpacity>
+
       <Text style={styles.resultsText}>
         {myLeagues.length} league{myLeagues.length !== 1 ? 's' : ''} joined
       </Text>
     </View>
+    
   );
 
   const noLeagues = (
@@ -177,8 +197,9 @@ export default function MyLeagues() {
   const leagueCards = myLeagues.map(league => { 
     const stats = league?.elo_info[user?.uid];
     const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
+    const LID = league.league_id;
     return (
-    <View key={league.id} style={styles.leagueCard}>
+    <View key={LID} style={styles.leagueCard}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
         {/* <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
@@ -233,7 +254,7 @@ export default function MyLeagues() {
       {/* Log Game Button */}
       <TouchableOpacity 
         style={styles.logGameButton}
-        onPress={() => handleLogGame(league.id, league.league_name)}
+        onPress={() => handleLogGame(LID, league.league_name)}
       >
         <Text style={styles.logGameButtonText}>📊 Log Game</Text>
       </TouchableOpacity>
@@ -250,7 +271,7 @@ export default function MyLeagues() {
         
         <TouchableOpacity 
           style={styles.leaveButton}
-          onPress={() => handleLeaveLeague(league.id, league.league_name)}
+          onPress={() => handleLeaveLeague(LID, league.league_name)}
         >
           <Text style={styles.leaveButtonText}>Leave League</Text>
         </TouchableOpacity>
@@ -395,6 +416,9 @@ export default function MyLeagues() {
 }
 
 const styles = StyleSheet.create({
+  refreshButtonText:{
+    fontSize: 32,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

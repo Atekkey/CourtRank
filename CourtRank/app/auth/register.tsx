@@ -1,4 +1,3 @@
-// NEED TO REVIEW
 import React, { useState } from 'react';
 import {
   View,
@@ -13,7 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { registerPlayer } from '../../services/firebaseService';
+import { registerPlayer, signInWithGoogle } from '../../services/firebaseService';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const [formData, setFormData] = useState({
@@ -24,6 +24,7 @@ export default function RegisterScreen() {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -97,9 +98,24 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Google Sign-Up error:', error);
+      Alert.alert('Sign-Up Failed', 'An error occurred during Google sign-up');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const navigateToLogin = () => {
     router.replace('/auth/login');
   };
+
+  const isFormDisabled = loading || googleLoading;
 
   return (
     <KeyboardAvoidingView
@@ -113,6 +129,28 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.formContainer}>
+          {/* Google Sign-Up Button */}
+          <TouchableOpacity
+            style={[styles.googleButton, googleLoading && styles.buttonDisabled]}
+            onPress={handleGoogleSignUp}
+            disabled={isFormDisabled}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#4285F4" />
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+                <Text style={styles.googleButtonText}>Sign up with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <View style={styles.nameRow}>
             <View style={[styles.inputContainer, styles.halfWidth]}>
               <Text style={styles.inputLabel}>First Name</Text>
@@ -123,6 +161,7 @@ export default function RegisterScreen() {
                 onChangeText={(value) => handleInputChange('firstName', value)}
                 autoCapitalize="words"
                 placeholderTextColor="#999"
+                editable={!isFormDisabled}
               />
             </View>
 
@@ -135,6 +174,7 @@ export default function RegisterScreen() {
                 onChangeText={(value) => handleInputChange('lastName', value)}
                 autoCapitalize="words"
                 placeholderTextColor="#999"
+                editable={!isFormDisabled}
               />
             </View>
           </View>
@@ -150,6 +190,7 @@ export default function RegisterScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               placeholderTextColor="#999"
+              editable={!isFormDisabled}
             />
           </View>
 
@@ -163,6 +204,7 @@ export default function RegisterScreen() {
               secureTextEntry
               autoCapitalize="none"
               placeholderTextColor="#999"
+              editable={!isFormDisabled}
             />
           </View>
 
@@ -176,13 +218,14 @@ export default function RegisterScreen() {
               secureTextEntry
               autoCapitalize="none"
               placeholderTextColor="#999"
+              editable={!isFormDisabled}
             />
           </View>
 
           <TouchableOpacity
-            style={[styles.registerButton, loading && styles.buttonDisabled]}
+            style={[styles.registerButton, isFormDisabled && styles.buttonDisabled]}
             onPress={handleRegister}
-            disabled={loading}
+            disabled={isFormDisabled}
           >
             {loading ? (
               <ActivityIndicator size="small" color="white" />
@@ -193,8 +236,8 @@ export default function RegisterScreen() {
 
           <View style={styles.loginPrompt}>
             <Text style={styles.loginPromptText}>Already have an account? </Text>
-            <TouchableOpacity onPress={navigateToLogin} disabled={loading}>
-              <Text style={styles.loginLink}>Sign In</Text>
+            <TouchableOpacity onPress={navigateToLogin} disabled={isFormDisabled}>
+              <Text style={[styles.loginLink, isFormDisabled && styles.disabledLink]}>Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -239,6 +282,31 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  googleButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#dadce0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  googleIcon: {
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: '#3c4043',
+    fontSize: 16,
+    fontWeight: '500',
+  },
   nameRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -279,11 +347,28 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#ccc',
     shadowOpacity: 0,
+    borderColor: '#ccc',
   },
   registerButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 25,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    color: '#666',
+    fontSize: 14,
+    fontWeight: '500',
   },
   loginPrompt: {
     flexDirection: 'row',
@@ -299,5 +384,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2f95dc',
     fontWeight: '600',
+  },
+  disabledLink: {
+    color: '#ccc',
   },
 });

@@ -1,26 +1,59 @@
+// import * as Google from 'expo-auth-session/providers/google';
+// import * as WebBrowser from 'expo-web-browser';
 
 import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  deleteDoc,
-  getDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  setDoc,
-  arrayUnion
+  collection, addDoc, getDocs, doc, updateDoc, deleteDoc,getDoc,
+  query, where, orderBy, onSnapshot,setDoc,
+  arrayUnion, arrayRemove, deleteField,
+  serverTimestamp 
 } from 'firebase/firestore';
 import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut,
-  onAuthStateChanged
+  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider, 
+  signInWithCredential,
+  signOut as firebaseSignOut,
+  User as FirebaseUser
 } from 'firebase/auth';
 import { db, auth } from './firebaseConfig';
+
+// WebBrowser.maybeCompleteAuthSession();
+// export const signInWithGoogle = async () => {
+//   try {
+//     const request = new Google.GoogleAuthRequest({
+//       clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, 
+//       scopes: ['profile', 'email'],
+//       responseType: Google.ResponseType.IdToken,
+//     });
+
+//     const result = await request.promptAsync();
+    
+//     if (result.type === 'success') {
+//       const { id_token } = result.params;
+      
+//       // Create Firebase credential
+//       const credential = GoogleAuthProvider.credential(id_token);
+      
+//       const userCredential = await signInWithCredential(auth, credential);
+//       const user = userCredential.user;
+      
+//       await createOrUpdateUserProfile(user, {
+//         first_name: user.displayName?.split(' ')[0] || '',
+//         last_name: user.displayName?.split(' ').slice(1).join(' ') || '',
+//         email: user.email || '',
+//         photo_url: user.photoURL || '',
+//         provider: 'google'
+//       });
+      
+//       return user;
+//     } else {
+//       throw new Error('Google sign-in was cancelled');
+//     }
+//   } catch (error) {
+//     console.error('Google Sign-In Error:', error);
+//     throw error;
+//   }
+// };
 
 
 // Auth Functions
@@ -175,6 +208,7 @@ export const joinLeague = async (league_id, user_id) => {
 };
 
 export const leaveLeague = async (league_id, user_id) => {
+  console.log('Leaving league:', league_id, 'for user:', user_id);
   try {
     const leagueRef = doc(db, 'leagues', league_id);
     const leagueDoc = await getDoc(leagueRef);

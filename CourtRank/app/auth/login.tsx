@@ -1,5 +1,3 @@
-// NEED TO REVIEW
-
 import React, { useState } from 'react';
 import {
   View,
@@ -14,12 +12,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { loginUser } from '../../services/firebaseService';
+import { loginUser, signInWithGoogle } from '../../services/firebaseService';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -30,13 +30,25 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await loginUser(email.trim(), password);
-      // Navigation will be handled automatically by the AuthContext
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Login Failed', /*error.message || */ 'An error occurred during login');
+      Alert.alert('Login Failed', 'An error occurred during login');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+      Alert.alert('Sign-In Failed', 'An error occurred during Google sign-in');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -56,6 +68,28 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.formContainer}>
+          {/* Google Sign-In Button */}
+          <TouchableOpacity
+            style={[styles.googleButton, googleLoading && styles.buttonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#4285F4" />
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.inputLabel}>Email</Text>
             <TextInput
@@ -67,6 +101,7 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               placeholderTextColor="#999"
+              editable={!loading && !googleLoading}
             />
           </View>
 
@@ -80,15 +115,16 @@ export default function LoginScreen() {
               secureTextEntry
               autoCapitalize="none"
               placeholderTextColor="#999"
-              onSubmitEditing={handleLogin} // Added so you can press enter to login
-              returnKeyType="go" // This is a non-web thing
+              onSubmitEditing={handleLogin}
+              returnKeyType="go"
+              editable={!loading && !googleLoading}
             />
           </View>
 
           <TouchableOpacity
-            style={[styles.loginButton, loading && styles.buttonDisabled]}
+            style={[styles.loginButton, (loading || googleLoading) && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || googleLoading}
           >
             {loading ? (
               <ActivityIndicator size="small" color="white" />
@@ -99,14 +135,14 @@ export default function LoginScreen() {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
+            <Text style={styles.dividerText}>New to CourtRank?</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <TouchableOpacity
-            style={styles.registerButton}
+            style={[styles.registerButton, (loading || googleLoading) && styles.buttonDisabled]}
             onPress={navigateToRegister}
-            disabled={loading}
+            disabled={loading || googleLoading}
           >
             <Text style={styles.registerButtonText}>Create New Account</Text>
           </TouchableOpacity>
@@ -151,6 +187,31 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  googleButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#dadce0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 20,
+  },
+  googleIcon: {
+    marginRight: 12,
+  },
+  googleButtonText: {
+    color: '#3c4043',
+    fontSize: 16,
+    fontWeight: '500',
+  },
   inputContainer: {
     marginBottom: 20,
   },
@@ -184,6 +245,7 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#ccc',
     shadowOpacity: 0,
+    borderColor: '#ccc',
   },
   loginButtonText: {
     color: 'white',
@@ -218,16 +280,5 @@ const styles = StyleSheet.create({
     color: '#2f95dc',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  guestButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  guestButtonText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
