@@ -36,6 +36,10 @@ export default function MyLeagues() {
   const [winTeam, setWinTeam] = useState([]);
   const [lossTeam, setLossTeam] = useState([]);
 
+  const [messageHeader, setMessageHeader] = useState("New Notification");
+  const [messageBody, setMessageBody] = useState("");
+
+
   const handleRefresh = async () => {
     try {
       const leagues = await getUserLeagues(user?.uid);
@@ -67,7 +71,6 @@ export default function MyLeagues() {
           ]
         );
       }
-      // TODO: Act leave league if proceed is true
       if (!proceed) return;
       await leaveLeague(leagueId, user?.uid);
       handleRefresh();
@@ -162,92 +165,6 @@ export default function MyLeagues() {
     return out;
   };
 
-  const leagueCards = myLeagues.map(league => { 
-    const stats = league?.elo_info[user?.uid];
-    const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
-    const LID = league.league_id;
-    return (
-    <View key={LID} style={styles.leagueCard}>
-      <View style={styles.leagueHeader}>
-        <Text style={styles.leagueName}>{league.league_name}</Text>
-        {/* <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
-          <Text style={styles.rankText}>#{league.userStats.rank}</Text>
-        </View> */}
-      </View>
-      
-      {/* <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text> */}
-      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
-      <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
-
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>ELO Rating</Text>
-          <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
-            {stats?.elo || ""}
-          </Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Win Rate</Text>
-          <Text style={styles.statValue}>
-            {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
-          </Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Games</Text>
-          <Text style={styles.statValue}>{numGames}</Text>
-        </View>
-      </View>
-
-      {/* W-T-L Record */}
-      <View style={styles.recordContainer}>
-        <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
-          <Text style={styles.recordLabel}>Wins</Text>
-        </View>
-        <View style={styles.recordSeparator} />
-        <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.ties ?? 0}</Text>
-          <Text style={styles.recordLabel}>Ties</Text>
-        </View>
-        <View style={styles.recordSeparator} />
-        <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.losses ?? 0}</Text>
-          <Text style={styles.recordLabel}>Losses</Text>
-        </View>
-      </View>
-
-      {/* Log Game Button */}
-      <TouchableOpacity 
-        style={styles.logGameButton}
-        onPress={() => logPressed(league)}
-      >
-        <Text style={styles.logGameButtonText}>📊 Log Game</Text>
-      </TouchableOpacity>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>Match History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          <Text style={styles.viewButtonText}>Leaderboard</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.leaveButton}
-          onPress={() => handleLeaveLeague(LID, league.league_name)}
-        >
-          <Text style={styles.leaveButtonText}>Leave League</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-    )
-  });
-
   const leaderboardMap = (curLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
     const name = pInfo.first_name + " " + pInfo.last_name;
     const rank = i + 1;
@@ -286,6 +203,11 @@ export default function MyLeagues() {
         </View>
       </Modal>
   );
+
+  // NOTIFICATION FXNS
+  const notifClicked = async (leagueId, leagueName) => {
+    console.log(`Notification clicked for League ID: ${leagueId}, Name: ${leagueName}`);
+  };
 
   // CREATING A LEAGUE
   const handleCreateLeague = async () => {
@@ -467,13 +389,6 @@ export default function MyLeagues() {
     return; // TODO
   };
 
-  const toggleSelect = (id) => {
-    setSelected(
-      prev =>
-      prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id]
-    );
-  };
-
   const toggleWin = (id) => {
     setSearch('');
     setWinTeam(prev => {
@@ -627,7 +542,101 @@ export default function MyLeagues() {
       </Modal>
   );
 
+  // LEAGUE CARDS
+  const leagueCards = myLeagues.map(league => { 
+    const stats = league?.elo_info[user?.uid];
+    const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
+    const LID = league.league_id;
+    return (
+    <View key={LID} style={styles.leagueCard}>
+      <View style={styles.leagueHeader}>
+        <Text style={styles.leagueName}>{league.league_name}</Text>
+        {/* <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
+          <Text style={styles.rankText}>#{league.userStats.rank}</Text>
+        </View> */}
+      </View>
+      
+      {/* <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text> */}
+      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
+      <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>ELO Rating</Text>
+          <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
+            {stats?.elo || ""}
+          </Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Win Rate</Text>
+          <Text style={styles.statValue}>
+            {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
+          </Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Games</Text>
+          <Text style={styles.statValue}>{numGames}</Text>
+        </View>
+      </View>
+
+      {/* W-T-L Record */}
+      <View style={styles.recordContainer}>
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
+          <Text style={styles.recordLabel}>Wins</Text>
+        </View>
+        <View style={styles.recordSeparator} />
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.ties ?? 0}</Text>
+          <Text style={styles.recordLabel}>Ties</Text>
+        </View>
+        <View style={styles.recordSeparator} />
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumber}>{stats.losses ?? 0}</Text>
+          <Text style={styles.recordLabel}>Losses</Text>
+        </View>
+      </View>
+
+      {/* Log Game Button */}
+      <TouchableOpacity 
+        style={styles.logGameButton}
+        onPress={() => logPressed(league)}
+      >
+        <Text style={styles.logGameButtonText}>📊 Log Game</Text>
+      </TouchableOpacity>
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>Match History</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
+          <Text style={styles.viewButtonText}>Leaderboard</Text>
+        </TouchableOpacity>
+        
+        { user?.uid === league?.admin_pid ? 
+        (<TouchableOpacity 
+          style={styles.notifButton}
+          onPress={() => notifClicked(LID, league.league_name)}
+        >
+          <Text style={styles.leaveButtonText}>Send Notification</Text>
+        </TouchableOpacity>) 
+        :
+        (<TouchableOpacity 
+          style={styles.leaveButton}
+          onPress={() => handleLeaveLeague(LID, league.league_name)}
+        >
+          <Text style={styles.leaveButtonText}>Leave League</Text>
+        </TouchableOpacity>)
+        }
+      </View>
+    </View>
+    )
+  });
 
   return (
     <ScrollView style={styles.container}>
@@ -997,6 +1006,13 @@ const styles = StyleSheet.create({
   },
   leaveButton: {
     backgroundColor: '#f44336',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+  },
+  notifButton: {
+    backgroundColor: '#8536f4ff',
     padding: 12,
     borderRadius: 8,
     flex: 1,
