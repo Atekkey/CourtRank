@@ -33,6 +33,8 @@ export default function MyLeagues() {
     ([id, info]) => 
     `${info.first_name} ${info.last_name}`.toLowerCase().includes(search.toLowerCase()) 
   );
+  const [winTeam, setWinTeam] = useState([]);
+  const [lossTeam, setLossTeam] = useState([]);
 
   const handleRefresh = async () => {
     try {
@@ -157,7 +159,6 @@ export default function MyLeagues() {
   const getSortedLeaderboard = () => {
     if (!curLeague) return [];
     const out = Object.entries(curLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
-    console.log(out);
     return out;
   };
 
@@ -473,54 +474,136 @@ export default function MyLeagues() {
     );
   };
 
+  const toggleWin = (id) => {
+    setSearch('');
+    setWinTeam(prev => {
+      if (prev.includes(id)) return prev;
+      setLossTeam(lossPrev => lossPrev.filter(pid => pid !== id));
+      return [...prev, id];
+    });
+  };
+
+  const toggleLoss = (id) => {
+    setSearch('');
+    setLossTeam(prev => {
+      if (prev.includes(id)) return prev;
+      setWinTeam(winPrev => winPrev.filter(pid => pid !== id));
+      return [...prev, id];
+    });
+  };
+
+  const toggleClear = (id) => {
+    setSearch('');
+    setWinTeam(prev => prev.filter(pid => pid !== id));
+    setLossTeam(prev => prev.filter(pid => pid !== id));
+  };
+
+  const getPlayerNames = (team) => {
+    if (!curLeague || !curLeague.elo_info) return [];
+    return team.map(
+      pid => {
+        const info = curLeague.elo_info[pid];
+        if (!info) return null;
+        return `${info.first_name} ${info.last_name}`;
+      })
+      .filter(Boolean);
+  };
+
+  const clearModal = () => {
+    setSearch('');
+    setWinTeam([]);
+    setLossTeam([]);
+  };
 
   const logModal = (
     <Modal
         visible={showLogModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setShowLogModal(false)}
+        onRequestClose={() => {setShowLogModal(false); clearModal();} }
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Log Game</Text>
             <TouchableOpacity 
               style={styles.closeButton}
-              onPress={() => setShowLogModal(false)}
+              onPress={() => {setShowLogModal(false); clearModal();}}
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
+          <ScrollView>
+            <View style={styles_col.modalContentContainer}>
+              <View style={styles_col.leftColumn}>
+                {/* Search Bar */}
+                <TextInput
+                  style={[styles.searchBar, {color: '#666666'}]}
+                  placeholder="Search players..."
+                  value={search}
+                  onChangeText={setSearch}
+                />
 
-          <ScrollView style={styles.modalContent}>
-            <View style={{ flex: 1 }}>
-              {/* Search Bar */}
-              <TextInput
-                style={[styles.searchBar, {color: '#666666'}]}
-                placeholder="Search players..."
-                value={search}
-                onChangeText={setSearch}
-              />
-
-              {/* Player List */}
-              <FlatList
+                {/* Player List */}
+                <FlatList
                 data={filteredPlayers}
                 keyExtractor={([id]) => id}
                 renderItem={({ item: [id, info] }) => {
                   const name = `${info.first_name} ${info.last_name}`;
-                  const isSelected = selected.includes(id);
-                  const elo = info.elo;
+                  const isWin = winTeam.includes(id);
+                  const isLoss = lossTeam.includes(id);
+
                   return (
-                    <TouchableOpacity
-                      onPress={() => toggleSelect(id)}
-                      style={[styles.row, isSelected && styles.selectedRow]}
-                    >
-                      <Text style={styles.name}>    {name}</Text>
-                      <Text style={styles.elo}>{elo}    </Text>
-                    </TouchableOpacity>
+                    <View style={styles.playerRow}>
+                      <View style={styles.nameCol}>
+                        <Text style={styles.nameText}>{name}</Text>
+                        <Text style={styles.eloText}>{info.elo}{isLoss && ' (L)'}{isWin && ' (W)'}</Text>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.clearCol]}
+                        onPress={() => toggleClear(id)}
+                      >
+                        <Text style={styles.teamText}>C</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.winCol, isWin && styles.selectedWin]}
+                        onPress={() => toggleWin(id)}
+                      >
+                        <Text style={styles.teamText}>W</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.lossCol, isLoss && styles.selectedLoss]}
+                        onPress={() => toggleLoss(id)}
+                      >
+                        <Text style={styles.teamText}>L</Text>
+                      </TouchableOpacity>
+
+                      
+                    </View>
                   );
                 }}
               />
+              </View>
+              <View style={styles_col.rightColumn}>
+                <View style={styles_col.winArea}>
+                  <Text style={styles_col.teamLabel}>Won</Text>
+                  <View style={styles_col.teamPlayers}>
+                    <Text style={styles_col.teamPlayersText}>{getPlayerNames(winTeam).join('\n')}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles_col.rightColumn}>
+                <View style={styles_col.lossArea}>
+                  <Text style={styles_col.teamLabel}>Lost</Text>
+                  <View style={styles_col.teamPlayers}>
+                    <Text style={styles_col.teamPlayersText}>{getPlayerNames(lossTeam).join('\n')}</Text>
+                  </View>
+                </View>
+              </View>
+              
             </View>
           </ScrollView>
 
@@ -528,7 +611,7 @@ export default function MyLeagues() {
           <View style={styles.modalActions}>
             <TouchableOpacity 
               style={styles.cancelButton}
-              onPress={() => setShowLogModal(false)}
+              onPress={() => {setShowLogModal(false); clearModal();}}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -567,7 +650,126 @@ export default function MyLeagues() {
   );
 }
 
+const styles_col = StyleSheet.create({
+  modalContentContainer: {
+  flex: 1,
+  flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1, 
+    borderRightWidth: 2,
+    borderRightColor: '#ccc',
+  },
+  rightColumn: {
+    flex: 1,
+    margin: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    overflow: 'hidden',
+    backgroundColor: 'white',
+  },
+  teamHeaderRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  teamHeaderWin: {
+    flex: 1,
+    backgroundColor: '#d6f5d6',
+    padding: 8,
+    alignItems: 'center',
+  },
+  teamHeaderLoss: {
+    flex: 1,
+    backgroundColor: '#f5d6d6',
+    padding: 8,
+    alignItems: 'center',
+  },
+  teamLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  teamPlayersRow: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  teamPlayers: {
+    flex: 1,
+    padding: 8,
+  },
+  teamPlayersText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  winArea: {
+    flex: 1,
+    backgroundColor: '#d6f5d6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lossArea: {
+    flex: 1,
+    backgroundColor: '#f5d6d6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
 const styles = StyleSheet.create({
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  nameCol: {
+    flex: 2,
+    padding: 8,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 16,
+  },
+  eloText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  winCol: {
+    flex: 1,
+    backgroundColor: '#d6f5d6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  lossCol: {
+    flex: 1,
+    backgroundColor: '#f5d6d6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  clearCol: {
+    flex: 1,
+    backgroundColor: '#cdcdcdff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  selectedWin: {
+    backgroundColor: '#98e698',
+    borderWidth: 2,
+    borderColor: 'black',
+  },
+  selectedLoss: {
+    backgroundColor: '#e69898',
+    borderWidth: 2,
+    borderColor: 'black',
+  },
+  teamText: {
+    fontWeight: 'bold',
+  },
   row: {
     flexDirection: 'row',
     paddingVertical: 8,
