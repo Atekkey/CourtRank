@@ -551,12 +551,11 @@ export default function MyLeagues() {
     <View key={LID} style={styles.leagueCard}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
-        {/* <View style={[styles.rankBadge, { backgroundColor: getRankColor(league.userStats.rank) }]}>
-          <Text style={styles.rankText}>#{league.userStats.rank}</Text>
-        </View> */}
+        {user?.uid == league?.admin_pid && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
+          <Text style={styles.leagueEndText}>📅</Text>
+        </TouchableOpacity>)}
       </View>
       
-      {/* <Text style={styles.leagueInfo}>🏆 Sport: {league.sport}</Text> */}
       <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
       <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
@@ -911,6 +910,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     marginVertical: 2,
+  },
+  leagueEnd: {
+    backgroundColor: '#444',
+    padding: 10,
+    borderRadius: 10,
+    fontSize: 26,
+    color: '#666',
+    justifyContent: 'center',
+  },
+  leagueEndText: {
+    fontSize: 18,
   },
   leagueDescription: {
     fontSize: 14,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
+import { getUserNotifications } from '../../services/firebaseService';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -33,61 +34,9 @@ const eloLegend = [
   { name: 'Volleyball League', color: '#4CAF50' },
 ];
 
-// Mock announcements data
-const mockAnnouncements = [
-  {
-    id: '1',
-    type: 'league_ending',
-    title: 'Downtown Basketball League Season Ending',
-    message: 'Season ends in 5 days! Final rankings will be calculated.',
-    timestamp: '2 hours ago',
-    league: 'Downtown Basketball League',
-    isNew: true,
-  },
-  {
-    id: '2',
-    type: 'admin_announcement',
-    title: 'New Court Added - Riverside Tennis',
-    message: 'We\'ve added a new court location at Riverside Park. Check it out!',
-    timestamp: '1 day ago',
-    league: 'Riverside Tennis Club',
-    isNew: true,
-  },
-  {
-    id: '3',
-    type: 'league_ending',
-    title: 'Volleyball Championship Finals',
-    message: 'Championship match scheduled for this weekend. Good luck!',
-    timestamp: '2 days ago',
-    league: 'Morning Volleyball League',
-    isNew: false,
-  },
-  {
-    id: '4',
-    type: 'admin_announcement',
-    title: 'Updated Match Rules',
-    message: 'New scoring system implemented. Please review the updated rules.',
-    timestamp: '3 days ago',
-    league: 'City Soccer Championship',
-    isNew: false,
-  },
-];
-
-// Mock user data
-const mockUser = {
-  name: 'Alex Johnson',
-  currentElo: 1647,
-  profileImage: null, // Will use placeholder
-  rank: 10,
-  totalGames: 47,
-  winRate: 68,
-};
-
 export default function Index() {
   const { user, userInfo, isLoading, logout } = useAuth();
-  const [announcements, setAnnouncements] = useState(mockAnnouncements);
-  // const [user, setUser] = useState(mockUser);
-  // const { user: authUser } = useAuth();
+  const [notifs, setNotifs] = useState([]);
 
   const chartConfig = {
   backgroundGradientFrom: '#ffffff',
@@ -98,33 +47,35 @@ export default function Index() {
   decimalPlaces: 0,
   };
 
-  const getAnnouncementIcon = (type) => {
-    switch (type) {
-      case 'league_ending':
-        return '⏰';
-      case 'admin_announcement':
-        return '📢';
-      default:
-        return '📝';
-    }
-  };
-
-  const getEloColor = (elo) => {
-    if (elo >= 2000) return '#4CAF50'; // Green for high ELO
-    if (elo >= 1600) return '#FF9800'; // Orange for medium-high ELO
-    if (elo >= 1200) return '#2196F3'; // Blue for decent ELO
-    return '#666'; // Gray for low ELO
-  };
-
-  const markAsRead = (announcementId) => {
-    setAnnouncements(prev => 
-      prev.map(announcement => 
-        announcement.id === announcementId 
-          ? { ...announcement, isNew: false }
-          : announcement
+  const markAsRead = (notificationId) => {
+    setNotifs(prev => 
+      prev.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, isNew: false }
+          : notification
       )
     );
   };
+
+  useEffect(() => {
+      // Fetch user's leagues from backend
+      const getNotifications = async () => {
+        try {
+          const notifications = await getUserNotifications(user?.uid || "");
+          setNotifs(notifications);
+          // setNotifs(prev => 
+          //   prev.map(notification => {
+          //     notification.isNew = true;
+          //     return notification;
+          //   })
+          // );
+        } catch (error) {
+          console.error('Error fetching notifications:', error);
+        }
+      };
+
+      getNotifications();
+    }, [user?.uid]);
 
   return (
     <ScrollView style={styles.container}>
@@ -151,29 +102,13 @@ export default function Index() {
         
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{userInfo?.first_name || ""}</Text>
-          <View style={styles.profileStats}>
-            {/* <View style={styles.statItem}>
-              <Text style={[styles.currentElo, { color: getEloColor(user.currentElo) }]}>
-                {user.currentElo}
-              </Text>
-              <Text style={styles.statLabel}>Current ELO</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>#{user.rank}</Text>
-              <Text style={styles.statLabel}>Best Rank</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{user.winRate}%</Text>
-              <Text style={styles.statLabel}>Win Rate</Text>
-            </View> */}
-          </View>
         </View>
       </View>
 
       {/* ELO Chart */}
       <View style={styles.chartContainer}>
         <Text style={styles.sectionTitle}>ELO History</Text>
-        {/* <LineChart
+        <LineChart
           data={mockEloData}
           width={screenWidth - 40}
           height={200}
@@ -185,15 +120,15 @@ export default function Index() {
           withInnerLines={true}
           withOuterLines={true}
           yAxisInterval={1}
-        /> */}
+        />
         {/* ELO Legend */}
         <View style={styles.legendContainer}>
-        {/* {eloLegend.map((item, index) => (
+        {eloLegend.map((item, index) => (
           <View key={index} style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: item.color }]} />
             <Text style={styles.legendText}>{item.name}</Text>
           </View>
-        ))} */}
+        ))}
       </View>
       </View>
 
@@ -201,42 +136,42 @@ export default function Index() {
       <View style={styles.announcementsContainer}>
         <Text style={styles.sectionTitle}>Announcements</Text>
         
-        {announcements.length === 0 ? (
+        {notifs.length === 0 ? (
           <View style={styles.noAnnouncementsContainer}>
-            <Text style={styles.noAnnouncementsText}>No new announcements</Text>
+            <Text style={styles.noAnnouncementsText}>No new notifications</Text>
             <Text style={styles.noAnnouncementsSubtext}>
               You're all caught up! Check back later for updates.
             </Text>
           </View>
         ) : (
-          announcements.map(announcement => (
+          notifs.map(announcement => (
             <TouchableOpacity
               key={announcement.id}
               style={[
                 styles.announcementCard,
-                announcement.isNew && styles.newAnnouncementCard
+                announcement?.isNew && styles.newAnnouncementCard
               ]}
               onPress={() => markAsRead(announcement.id)}
             >
               <View style={styles.announcementHeader}>
                 <View style={styles.announcementIcon}>
                   <Text style={styles.announcementIconText}>
-                    {getAnnouncementIcon(announcement.type)}
+                    📢
                   </Text>
                 </View>
                 <View style={styles.announcementContent}>
-                  <Text style={styles.announcementTitle}>{announcement.title}</Text>
-                  <Text style={styles.announcementLeague}>{announcement.league}</Text>
+                  <Text style={styles.announcementTitle}>{announcement?.header || ""}</Text>
+                  <Text style={styles.announcementLeague}>{announcement?.league_name || ""}</Text>
                 </View>
-                {announcement.isNew && (
+                {announcement?.isNew && (
                   <View style={styles.newBadge}>
                     <Text style={styles.newBadgeText}>NEW</Text>
                   </View>
                 )}
               </View>
-              
-              <Text style={styles.announcementMessage}>{announcement.message}</Text>
-              <Text style={styles.announcementTimestamp}>{announcement.timestamp}</Text>
+
+              <Text style={styles.announcementMessage}>{announcement?.body || ""}</Text>
+              {/* <Text style={styles.announcementTimestamp}>{announcement?.timestamp || ""}</Text> */}
             </TouchableOpacity>
           ))
         )}

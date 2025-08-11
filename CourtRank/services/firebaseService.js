@@ -160,13 +160,30 @@ export const getLeagues = async () => {
     const querySnapshot = await getDocs(collection(db, 'leagues'));
     const leagues = [];
     querySnapshot.forEach((doc) => {
-      leagues.push({ league_id: doc.id, ...doc.data() }); // TODO: if needed, only take important brief info
+      leagues.push({ league_id: doc.id, ...doc.data() });
     });
     return leagues;
   } catch (error) {
     throw error;
   }
 };
+
+export const getUserNotifications = async (user_id) => {
+  try {
+    const q = query(
+      collection(db, 'notifications'),
+      where('players', 'array-contains', user_id),
+    );
+    const notifications = [];
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      notifications.push({id: doc.id, ...doc.data()});
+    });
+    return notifications;
+  } catch (error) {
+    throw error;
+  }
+}
 
 export const joinLeague = async (league_id, user_id) => {
   try {
