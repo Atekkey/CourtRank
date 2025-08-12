@@ -35,10 +35,10 @@ export default function MyLeagues() {
   );
   const [winTeam, setWinTeam] = useState([]);
   const [lossTeam, setLossTeam] = useState([]);
-
-  const [messageHeader, setMessageHeader] = useState("New Notification");
+  // Notifs
+  const [messageHeader, setMessageHeader] = useState("");
   const [messageBody, setMessageBody] = useState("");
-
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   const handleRefresh = async () => {
     try {
@@ -205,9 +205,84 @@ export default function MyLeagues() {
   );
 
   // NOTIFICATION FXNS
-  const notifClicked = async (leagueId, leagueName) => {
-    console.log(`Notification clicked for League ID: ${leagueId}, Name: ${leagueName}`);
+  const notifClicked = async (league) => {
+    console.log(`Notification clicked for League ID: ${league.league_id}, Name: ${league.league_name}`);
+    setCurLeague(league);
+    setShowNotifModal(true);
   };
+
+  const notifUnclicked = async () => {
+    setShowNotifModal(false);
+    setMessageBody("");
+    setMessageHeader("");
+  };
+
+  const notificationModal = (
+    <Modal
+      visible={showNotifModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => notifUnclicked()}
+    >
+      <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Send Notification</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => notifUnclicked()}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* League Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Message Subject *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={messageHeader}
+                onChangeText={(text) => setMessageHeader(text)}
+                placeholder="Enter message subject"
+                maxLength={50}
+              />
+            </View>
+            
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Message Body *</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={messageBody}
+                onChangeText={(text) => setMessageBody(text)}
+                placeholder="Message body"
+                multiline
+                numberOfLines={5}
+                maxLength={500}
+              />
+            </View>
+
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => notifUnclicked()}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={() => {}}
+            >
+              <Text style={styles.createButtonText}>Send Notification</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+    </Modal>
+  );
 
   // CREATING A LEAGUE
   const handleCreateLeague = async () => {
@@ -547,8 +622,10 @@ export default function MyLeagues() {
     const stats = league?.elo_info[user?.uid];
     const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
     const LID = league.league_id;
+    const leagueExpDate = league.league_end_date;
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now());
     return (
-    <View key={LID} style={styles.leagueCard}>
+    <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
         {user?.uid == league?.admin_pid && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
@@ -560,7 +637,7 @@ export default function MyLeagues() {
       <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
       {/* Stats Section */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ELO Rating</Text>
           <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
@@ -582,7 +659,7 @@ export default function MyLeagues() {
       </View>
 
       {/* W-T-L Record */}
-      <View style={styles.recordContainer}>
+      <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
         <View style={styles.recordItem}>
            <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
           <Text style={styles.recordLabel}>Wins</Text>
@@ -600,12 +677,12 @@ export default function MyLeagues() {
       </View>
 
       {/* Log Game Button */}
-      <TouchableOpacity 
+      {(!leagueDidExpire) && (<TouchableOpacity 
         style={styles.logGameButton}
         onPress={() => logPressed(league)}
       >
         <Text style={styles.logGameButtonText}>📊 Log Game</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>)}
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -620,7 +697,7 @@ export default function MyLeagues() {
         { user?.uid === league?.admin_pid ? 
         (<TouchableOpacity 
           style={styles.notifButton}
-          onPress={() => notifClicked(LID, league.league_name)}
+          onPress={() => notifClicked(league)}
         >
           <Text style={styles.leaveButtonText}>Send Notification</Text>
         </TouchableOpacity>) 
@@ -646,6 +723,7 @@ export default function MyLeagues() {
       {createLeagueModal}
       {leaderboardModal}
       {logModal}
+      {notificationModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -883,6 +961,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  leagueCardExpired: {
+    backgroundColor: '#d4d4d4ff',
+    margin: 15,
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   leagueHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -936,6 +1025,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
   },
+  statsContainerExpired: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 15,
+    paddingVertical: 15,
+    backgroundColor: '#dfdfdfff',
+    borderRadius: 8,
+  },
   statItem: {
     alignItems: 'center',
   },
@@ -956,7 +1053,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+  recordContainerExpired: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 15,
+    paddingVertical: 15,
+    backgroundColor: '#dfdfdfff',
     borderRadius: 8,
   },
   recordItem: {
@@ -1038,6 +1144,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
+  },
+  modalNotifContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    flexDirection: 'column',
   },
   modalHeader: {
     flexDirection: 'row',
