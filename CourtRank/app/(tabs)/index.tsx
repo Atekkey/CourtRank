@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserNotifications } from '../../services/firebaseService';
+import { getUserNotifications, subscribeToUserNotifications } from '../../services/firebaseService';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -47,35 +47,19 @@ export default function Index() {
   decimalPlaces: 0,
   };
 
-  const markAsRead = (notificationId) => {
-    setNotifs(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, isNew: false }
-          : notification
-      )
-    );
-  };
-
   useEffect(() => {
-      // Fetch user's leagues from backend
-      const getNotifications = async () => {
-        try {
-          const notifications = await getUserNotifications(user?.uid || "");
-          setNotifs(notifications);
-          // setNotifs(prev => 
-          //   prev.map(notification => {
-          //     notification.isNew = true;
-          //     return notification;
-          //   })
-          // );
-        } catch (error) {
-          console.error('Error fetching notifications:', error);
-        }
-      };
+    // Fetch user's leagues from backend
+    const getNotifications = async () => {
+      try {
+        const notifications = await getUserNotifications(user?.uid || "");
+        setNotifs(notifications);
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
+    };
+    getNotifications();
+  }, [user?.uid]);
 
-      getNotifications();
-    }, [user?.uid]);
 
   return (
     <ScrollView style={styles.container}>
@@ -151,7 +135,7 @@ export default function Index() {
                 styles.announcementCard,
                 announcement?.isNew && styles.newAnnouncementCard
               ]}
-              onPress={() => markAsRead(announcement.id)}
+              // onPress={() => markAsRead(announcement.id)}
             >
               <View style={styles.announcementHeader}>
                 <View style={styles.announcementIcon}>

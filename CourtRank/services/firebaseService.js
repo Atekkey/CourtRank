@@ -230,7 +230,8 @@ export const joinLeague = async (league_id, user_id) => {
           losses: 0,
           ties: 0,
           first_name: playerData.first_name || '',
-          last_name: playerData.last_name || ''
+          last_name: playerData.last_name || '',
+          score: 0
         }
       }
     }, { merge: true });
