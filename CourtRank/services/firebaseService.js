@@ -115,6 +115,33 @@ export const getCurrentUser = () => {
   });
 };
 
+// Notification Functions
+export const getUserNotifications = async (user_id) => {
+  try {
+    const q = query(
+      collection(db, 'notifications'),
+      where('players', 'array-contains', user_id),
+    );
+    const notifications = [];
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      notifications.push({id: doc.id, ...doc.data()});
+    });
+    return notifications;
+  } catch (error) {
+    throw error;
+  }
+}
+
+export const createNotification = async (notificationInfo) => {
+  try {
+    const docRef = await addDoc(collection(db, 'notifications'), notificationInfo);
+    return { id: docRef.id, ...notificationInfo };
+  } catch (error) {
+    throw error;
+  }
+}
+
 // League Functions
 
 // Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
@@ -167,23 +194,6 @@ export const getLeagues = async () => {
     throw error;
   }
 };
-
-export const getUserNotifications = async (user_id) => {
-  try {
-    const q = query(
-      collection(db, 'notifications'),
-      where('players', 'array-contains', user_id),
-    );
-    const notifications = [];
-    const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((doc) => {
-      notifications.push({id: doc.id, ...doc.data()});
-    });
-    return notifications;
-  } catch (error) {
-    throw error;
-  }
-}
 
 export const joinLeague = async (league_id, user_id) => {
   try {

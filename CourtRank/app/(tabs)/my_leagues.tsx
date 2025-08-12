@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -217,6 +217,31 @@ export default function MyLeagues() {
     setMessageHeader("");
   };
 
+  const handleCreateNotif = async () => {
+    try {
+      await createNotification({
+        admin_name: `${userInfo.first_name} ${userInfo.last_name}`,
+        league_name: curLeague.league_name,
+        players: curLeague.players,
+        header: messageHeader,
+        body: messageBody,
+        timestamp: new Date(),
+      });
+      if (Platform.OS === 'web') {
+        window.alert("Notification Sent!");
+      } else {
+        Alert.alert('Success', 'Notification Sent!');
+      }
+      notifUnclicked();
+    } catch (error) {
+      if (Platform.OS === 'web') {
+        window.alert("Notification Creation Failed.");
+      } else {
+        Alert.alert('Error', 'Notification Creation Failed.');
+      }
+    }
+  }
+
   const notificationModal = (
     <Modal
       visible={showNotifModal}
@@ -247,7 +272,7 @@ export default function MyLeagues() {
                 maxLength={50}
               />
             </View>
-            
+
             {/* Description */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Message Body *</Text>
@@ -275,7 +300,7 @@ export default function MyLeagues() {
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={() => {}}
+              onPress={() => handleCreateNotif()}
             >
               <Text style={styles.createButtonText}>Send Notification</Text>
             </TouchableOpacity>
