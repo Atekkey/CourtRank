@@ -306,16 +306,11 @@ export const getPlayerInfo = async (user_id) => {
 export const createMatch = async (matchData) => {
   try {
     const docRef = await addDoc(collection(db, 'matches'), {
-      league_id: matchData.league_id, // League ID
-      league_k_factor: matchData.league_k_factor, // League K-factor
-      winning_players: matchData.winning_players, // Array of player IDs
-      losing_players: matchData.losing_players, // Array of player IDs
-      createdAt: new Date(),
-      // status: 'init'
+      ...matchData,
     });
     return docRef.id;
   } catch (error) {
-    throw error;
+    return null;
   }
 };
 

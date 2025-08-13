@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -25,6 +25,7 @@ export default function MyLeagues() {
     players: [],
     description: "",
   });
+  const expiryImplemented = false;
   // Log & Search
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
@@ -316,7 +317,6 @@ export default function MyLeagues() {
       Alert.alert('Error', 'Please enter a league name.');
       return;
     }
-
     try {
       await createLeague(newLeague);
       
@@ -485,8 +485,68 @@ export default function MyLeagues() {
     setShowLogModal(true);
   };
   
-  const handleLogGame = async (leagueId, leagueName) => {
-    return; // TODO
+  const handleLogGamePressed = async () => {
+    // Is User in the Game
+    const userPresent = winTeam.includes(user?.uid) || lossTeam.includes(user?.uid);
+    if (!userPresent) {
+      if (Platform.OS === 'web') {
+        window.alert("You must be a player in the league to log a game.");
+      } else {
+        Alert.alert("Error", "You must be a player in the league to log a game.");
+      }
+      return;
+    }
+    const validTeams = winTeam.length === lossTeam.length;
+    if (!validTeams) {
+      if (Platform.OS === 'web') {
+        window.alert("Both teams must have the same number of players.");
+      } else {
+        Alert.alert("Error", "Both teams must have the same number of players.");
+      }
+      return;
+    }
+    if (!curLeague.league_id) {
+      if (Platform.OS === 'web') {
+        window.alert("League Error");
+      } else {
+        Alert.alert("Error", "League Error");
+      }
+      return;
+    }
+
+    // Continue
+    const winTeamInfo = getPlayerInfoArray(winTeam);
+    const winTeamClean = Object.fromEntries(winTeamInfo);
+
+    const lossTeamInfo = getPlayerInfoArray(lossTeam);
+    const lossTeamClean = Object.fromEntries(lossTeamInfo);
+
+    const matchData = {
+      league_id: curLeague.league_id,
+      league_k_factor: curLeague.league_k_factor,
+      win_team: winTeamClean,
+      loss_team: lossTeamClean,
+    };
+
+    const result = await createMatch(matchData);
+    if (!result) {
+      if (Platform.OS === 'web') {
+        window.alert("Failed to create match.");
+      } else {
+        Alert.alert("Error", "Failed to create match.");
+      }
+    }
+    if (result) {
+      if (Platform.OS === 'web') {
+        window.alert("Match created successfully.");
+      } else {
+        Alert.alert("Success", "Match created successfully.");
+      }
+      setWinTeam([]);
+      setLossTeam([]);
+      setShowLogModal(false);
+    }
+
   };
 
   const toggleWin = (id) => {
@@ -520,6 +580,22 @@ export default function MyLeagues() {
         const info = curLeague.elo_info[pid];
         if (!info) return null;
         return `${info.first_name} ${info.last_name}`;
+      })
+      .filter(Boolean);
+  };
+
+  const getPlayerInfoArray = (team) => {
+    if (!curLeague || !curLeague.elo_info) return [];
+    return team.map(
+      pid => {
+        const info = curLeague.elo_info[pid];
+        if (!info) return null;
+        const pidInfo = {
+          first_name: info.first_name,
+          last_name: info.last_name,
+          elo: info.elo
+        }
+        return [pid, pidInfo];
       })
       .filter(Boolean);
   };
@@ -633,7 +709,7 @@ export default function MyLeagues() {
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={handleLogGame}
+              onPress={() => handleLogGamePressed()}
             >
               <Text style={styles.createButtonText}>Log Game</Text>
             </TouchableOpacity>
@@ -648,17 +724,18 @@ export default function MyLeagues() {
     const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
     const LID = league.league_id;
     const leagueExpDate = league.league_end_date;
-    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now());
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
+
     return (
     <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
-        {user?.uid == league?.admin_pid && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
+        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
           <Text style={styles.leagueEndText}>📅</Text>
         </TouchableOpacity>)}
       </View>
       
-      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
+      <Text style={styles.leagueInfo}>{(league.location) ? ("📍: " + league.location) : "" }</Text>
       <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
       {/* Stats Section */}
