@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -40,11 +40,30 @@ export default function MyLeagues() {
   const [messageHeader, setMessageHeader] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [showNotifModal, setShowNotifModal] = useState(false);
+  // Match History
+  const [matchHistory, setMatchHistory] = useState([]);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+
+  useEffect(() => {
+    // Fetch user's leagues from backend
+    const fetchMyLeagues = async () => {
+      try {
+        const leagues = await getUserLeagues(user?.uid);
+        setMyLeagues(leagues);
+      } catch (error) {
+        console.error('Error fetching my leagues:', error);
+      }
+    };
+
+    fetchAllMatchHistory();
+    fetchMyLeagues();
+  }, [user?.uid]);
 
   const handleRefresh = async () => {
     try {
       const leagues = await getUserLeagues(user?.uid);
       setMyLeagues(leagues);
+      fetchAllMatchHistory();
     } catch (error) {
       console.error('Error fetching my leagues:', error);
     }
@@ -109,20 +128,6 @@ export default function MyLeagues() {
     if (total === 0) return 0;
     return ((wins + ties * 0.5) / total * 100).toFixed(1);
   };
-
-  useEffect(() => {
-    // Fetch user's leagues from backend
-    const fetchMyLeagues = async () => {
-      try {
-        const leagues = await getUserLeagues(user?.uid);
-        setMyLeagues(leagues);
-      } catch (error) {
-        console.error('Error fetching my leagues:', error);
-      }
-    };
-
-    fetchMyLeagues();
-  }, [user?.uid]);
 
   // Header Displays
   const header = (
@@ -207,7 +212,6 @@ export default function MyLeagues() {
 
   // NOTIFICATION FXNS
   const notifClicked = async (league) => {
-    console.log(`Notification clicked for League ID: ${league.league_id}, Name: ${league.league_name}`);
     setCurLeague(league);
     setShowNotifModal(true);
   };
@@ -526,6 +530,7 @@ export default function MyLeagues() {
       league_k_factor: curLeague.league_k_factor,
       win_team: winTeamClean,
       loss_team: lossTeamClean,
+      timestamp: new Date(),
     };
 
     const result = await createMatch(matchData);
@@ -546,7 +551,6 @@ export default function MyLeagues() {
       setLossTeam([]);
       setShowLogModal(false);
     }
-
   };
 
   const toggleWin = (id) => {
@@ -718,6 +722,63 @@ export default function MyLeagues() {
       </Modal>
   );
 
+  // Match FXNs
+  const matchPressed = (league) => {
+    setCurLeague(league);
+    setShowMatchModal(true);
+  };
+
+  const fetchAllMatchHistory = async () => {
+    try {
+      const matches = await getAllMatches();
+      setMatchHistory(matches);
+    } catch (error) {
+    }
+  };
+  
+  const matchMap = (matchHistory.length > 0) ? (matchHistory.map(matchInfo => {
+    return (
+      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+        
+        <View style={[styles_match.card, styles_match.winnerCard]}>
+          <Text style={styles_match.names}>{"2"}</Text>
+        </View>
+
+        <View style={[styles_match.card, styles_match.loserCard]}>
+          <Text style={styles_match.names}>{"1"}</Text>
+        </View>
+
+      </View>
+    );
+  })) : null;
+
+  const matchHistoryModal = (
+    <Modal
+        visible={showMatchModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMatchModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Match History</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowMatchModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {matchMap}
+          </ScrollView>
+
+        </View>
+      </Modal>
+  );
+  
+
   // LEAGUE CARDS
   const leagueCards = myLeagues.map(league => { 
     const stats = league?.elo_info[user?.uid];
@@ -730,12 +791,12 @@ export default function MyLeagues() {
     <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
-        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
+        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => {}}>
           <Text style={styles.leagueEndText}>📅</Text>
         </TouchableOpacity>)}
       </View>
       
-      <Text style={styles.leagueInfo}>{(league.location) ? ("📍: " + league.location) : "" }</Text>
+      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
       <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
       {/* Stats Section */}
@@ -788,7 +849,7 @@ export default function MyLeagues() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.viewButton}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
           <Text style={styles.viewButtonText}>Match History</Text>
         </TouchableOpacity>
 
@@ -826,6 +887,7 @@ export default function MyLeagues() {
       {leaderboardModal}
       {logModal}
       {notificationModal}
+      {matchHistoryModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -1396,5 +1458,35 @@ const styles = StyleSheet.create({
   },
   selectedRow: {
     backgroundColor: '#d0f0d0', // light green for selected
+  },
+});
+
+const styles_match = StyleSheet.create({
+  matchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  card: {
+    flex: 1,
+    padding: 12,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  winnerCard: {
+    backgroundColor: '#4CAF50', // green
+  },
+  loserCard: {
+    backgroundColor: '#F44336', // red
+  },
+  teamName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  names: {
+    fontSize: 14,
+    color: 'white',
   },
 });

@@ -25,18 +25,13 @@ import { db, auth } from './firebaseConfig';
 //       scopes: ['profile', 'email'],
 //       responseType: Google.ResponseType.IdToken,
 //     });
-
 //     const result = await request.promptAsync();
-    
 //     if (result.type === 'success') {
 //       const { id_token } = result.params;
-      
 //       // Create Firebase credential
 //       const credential = GoogleAuthProvider.credential(id_token);
-      
 //       const userCredential = await signInWithCredential(auth, credential);
 //       const user = userCredential.user;
-      
 //       await createOrUpdateUserProfile(user, {
 //         first_name: user.displayName?.split(' ')[0] || '',
 //         last_name: user.displayName?.split(' ').slice(1).join(' ') || '',
@@ -44,7 +39,6 @@ import { db, auth } from './firebaseConfig';
 //         photo_url: user.photoURL || '',
 //         provider: 'google'
 //       });
-      
 //       return user;
 //     } else {
 //       throw new Error('Google sign-in was cancelled');
@@ -57,6 +51,7 @@ import { db, auth } from './firebaseConfig';
 
 
 // Auth Functions
+
 export const registerPlayer = async (email, password, userData) => {
   let user = null;
   try {
@@ -143,8 +138,6 @@ export const createNotification = async (notificationInfo) => {
 }
 
 // League Functions
-
-// Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
 export const createLeague = async (data={}) => {
 
   let whitelist_pids_ = [];
@@ -301,7 +294,6 @@ export const getPlayerInfo = async (user_id) => {
   }
 };
 
-/////////////////// All Below Might be unnecessary
 // Match Functions
 export const createMatch = async (matchData) => {
   try {
@@ -314,21 +306,25 @@ export const createMatch = async (matchData) => {
   }
 };
 
-// export const updateMatchResult = async (matchId, result) => {
-//   try {
-//     const matchRef = doc(db, 'matches', matchId);
-//     await updateDoc(matchRef, {
-//       result: result,
-//       status: 'completed',
-//       completedAt: new Date()
-//     });
-//   } catch (error) {
-//     throw error;
-//   }
-// };
+export const getAllMatches = async () => {
+  try {
+    const q = query(
+      collection(db, 'matches'),
+      // where('league_id', '==', league_id),
+      orderBy('timestamp', 'desc')
+    );
+    const matches = [];
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      matches.push({id: doc.id, ...doc.data()});
+    });
+    return matches;
+  } catch (error) {
+    throw error;
+  }
+}
 
 // Real-time listeners
-
 export const subscribeToLeagues = (callback) => {
   const unsubscribe = onSnapshot(collection(db, 'leagues'), (snapshot) => {
     const leagues = [];
