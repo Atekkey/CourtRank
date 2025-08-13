@@ -748,6 +748,10 @@ export default function MyLeagues() {
           <Text style={styles_match.names}>{"1"}</Text>
         </View>
 
+        <View style={[styles_match.card, styles_match.dateCard]}>
+          <Text style={styles_match.names}>{"Date"}</Text>
+        </View>
+
       </View>
     );
   })) : null;
@@ -1475,10 +1479,16 @@ const styles_match = StyleSheet.create({
     alignItems: 'center',
   },
   winnerCard: {
-    backgroundColor: '#4CAF50', // green
+    flex: 4,
+    backgroundColor: '#72cd75ff', 
   },
   loserCard: {
-    backgroundColor: '#F44336', // red
+    flex: 4,
+    backgroundColor: '#ed6a60ff',
+  },
+  dateCard: {
+    flex: 1,
+    backgroundColor: '#a8a8a8ff',
   },
   teamName: {
     fontSize: 16,
