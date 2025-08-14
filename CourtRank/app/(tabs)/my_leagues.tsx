@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, getAllMatchesStruct } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -26,6 +26,7 @@ export default function MyLeagues() {
     description: "",
   });
   const expiryImplemented = false;
+  const privateImplemented = false;
   // Log & Search
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
@@ -43,6 +44,7 @@ export default function MyLeagues() {
   // Match History
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
+  const [allMatches, setAllMatches] = useState({});
 
   useEffect(() => {
     // Fetch user's leagues from backend
@@ -425,7 +427,7 @@ export default function MyLeagues() {
             </View>
 
             {/* Privacy Setting */}
-            <View style={styles.inputGroup}>
+            {privateImplemented && (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>League Privacy *</Text>
               <View style={styles.privacyOptions}>
                 <TouchableOpacity
@@ -460,7 +462,7 @@ export default function MyLeagues() {
                   <Text style={styles.privacyOptionSubtext}>Visible, but Invite required to join</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </View>)}
           </ScrollView>
 
           {/* Action Buttons */}
@@ -735,21 +737,30 @@ export default function MyLeagues() {
     } catch (error) {
     }
   };
+
+  const getMatchPlayers = (team) => {
+    const playerNames = Object.values(team).map(
+      ({first_name, last_name}) => `${first_name} ${last_name}`
+    );
+    return playerNames;
+  };
   
-  const matchMap = (matchHistory.length > 0) ? (matchHistory.map(matchInfo => {
+  const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
+    if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
+    const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
         
         <View style={[styles_match.card, styles_match.winnerCard]}>
-          <Text style={styles_match.names}>{"2"}</Text>
+          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text>
         </View>
 
         <View style={[styles_match.card, styles_match.loserCard]}>
-          <Text style={styles_match.names}>{"1"}</Text>
+          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text>
         </View>
 
         <View style={[styles_match.card, styles_match.dateCard]}>
-          <Text style={styles_match.names}>{"Date"}</Text>
+          <Text style={styles_match.names}>{date}</Text>
         </View>
 
       </View>
