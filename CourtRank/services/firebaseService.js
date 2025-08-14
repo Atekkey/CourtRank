@@ -139,12 +139,7 @@ export const createNotification = async (notificationInfo) => {
 
 // League Functions
 export const createLeague = async (data={}) => {
-
-  let whitelist_pids_ = [];
-  if (data.admin_pid && data.admin_pid.trim() !== '') {
-    whitelist_pids_ = data.is_public ? [data.admin_pid] : [];
-  }
-
+  
   try {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
@@ -162,7 +157,6 @@ export const createLeague = async (data={}) => {
       description: data.description || '',
 
       elo_info: {},
-      whitelist_pids: whitelist_pids_,
       players: [],
     });
     // Add admin to players and elo_info

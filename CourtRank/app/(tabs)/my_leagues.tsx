@@ -24,9 +24,10 @@ export default function MyLeagues() {
     whitelist_pids: [],
     players: [],
     description: "",
+    password: "",
   });
   const expiryImplemented = false;
-  const privateImplemented = false;
+  const privateImplemented = true;
   // Log & Search
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState([]);
@@ -320,7 +321,19 @@ export default function MyLeagues() {
   const handleCreateLeague = async () => {
     // Validate required fields
     if (!newLeague.league_name.trim()) {
-      Alert.alert('Error', 'Please enter a league name.');
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Please enter a league name.'`);
+      } else {
+        Alert.alert('Error', 'Please enter a league name.');
+      }
+      return;
+    }
+    if (!newLeague.password.trim() && (!newLeague.is_public)) {
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Please enter a league password.'`);
+      } else {
+        Alert.alert('Error', 'Please enter a league password.');
+      }
       return;
     }
     try {
@@ -343,6 +356,7 @@ export default function MyLeagues() {
         whitelist_pids: [],
         players: [],
         description: "",
+        password: ""
       });
 
       // Show success notification
@@ -459,10 +473,25 @@ export default function MyLeagues() {
                   ]}>
                     🔒 Private
                   </Text>
-                  <Text style={styles.privacyOptionSubtext}>Visible, but Invite required to join</Text>
+                  <Text style={styles.privacyOptionSubtext}>Visible, Password required to join</Text>
                 </TouchableOpacity>
               </View>
             </View>)}
+
+            {/* Password */}
+            {newLeague.isPublic === false && (<View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password *</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newLeague.password}
+                onChangeText={(text) => setNewLeague({...newLeague, password: text})}
+                placeholder="Enter a short password for the league"
+                multiline
+                numberOfLines={1}
+                maxLength={15}
+              />
+            </View>)}
+
           </ScrollView>
 
           {/* Action Buttons */}
