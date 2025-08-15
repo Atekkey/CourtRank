@@ -46,9 +46,11 @@ export default function MyLeagues() {
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [allMatches, setAllMatches] = useState({});
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Fetch user's leagues from backend
+    setLoading(true);
     const fetchMyLeagues = async () => {
       try {
         const leagues = await getUserLeagues(user?.uid);
@@ -57,20 +59,22 @@ export default function MyLeagues() {
         console.error('Error fetching my leagues:', error);
       }
     };
-
     fetchAllMatchHistory();
     fetchMyLeagues();
+    setLoading(false);
   }, [user?.uid]);
 
   const handleRefresh = async () => {
+    setLoading(true);
     try {
       const leagues = await getUserLeagues(user?.uid);
       setMyLeagues(leagues);
       fetchAllMatchHistory();
     } catch (error) {
+      setLoading(false);
       console.error('Error fetching my leagues:', error);
     }
-    return; // TODO
+    setLoading(false);
   };
 
   const handleLeaveLeague = async (leagueId, leagueName) => {
@@ -146,9 +150,16 @@ export default function MyLeagues() {
         <Text style={[styles.refreshButtonText]}>🔄</Text>
       </TouchableOpacity>
 
-      <Text style={styles.resultsText}>
+      {!loading ? 
+      (<Text style={styles.resultsText}>
         {myLeagues.length} league{myLeagues.length !== 1 ? 's' : ''} joined
-      </Text>
+      </Text>)
+      : 
+      ( <Text style={styles.resultsText}>
+        loading...
+      </Text>)
+      }
+      
     </View>
     
   );
@@ -447,13 +458,13 @@ export default function MyLeagues() {
                 <TouchableOpacity
                   style={[
                     styles.privacyOption,
-                    newLeague.isPublic && styles.privacyOptionSelected
+                    newLeague.is_public && styles.privacyOptionSelected
                   ]}
-                  onPress={() => setNewLeague({...newLeague, isPublic: true})}
+                  onPress={() => setNewLeague({...newLeague, is_public: true})}
                 >
                   <Text style={[
                     styles.privacyOptionText,
-                    newLeague.isPublic && styles.privacyOptionTextSelected
+                    newLeague.is_public && styles.privacyOptionTextSelected
                   ]}>
                     🌐 Public
                   </Text>
@@ -463,13 +474,13 @@ export default function MyLeagues() {
                 <TouchableOpacity
                   style={[
                     styles.privacyOption,
-                    !newLeague.isPublic && styles.privacyOptionSelected
+                    !newLeague.is_public && styles.privacyOptionSelected
                   ]}
-                  onPress={() => setNewLeague({...newLeague, isPublic: false})}
+                  onPress={() => setNewLeague({...newLeague, is_public: false})}
                 >
                   <Text style={[
                     styles.privacyOptionText,
-                    !newLeague.isPublic && styles.privacyOptionTextSelected
+                    !newLeague.is_public && styles.privacyOptionTextSelected
                   ]}>
                     🔒 Private
                   </Text>
@@ -479,7 +490,7 @@ export default function MyLeagues() {
             </View>)}
 
             {/* Password */}
-            {newLeague.isPublic === false && (<View style={styles.inputGroup}>
+            {newLeague.is_public === false && (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password *</Text>
               <TextInput
                 style={[styles.textInput, styles.textArea]}

@@ -139,13 +139,13 @@ export const createNotification = async (notificationInfo) => {
 
 // League Functions
 export const createLeague = async (data={}) => {
-  
+
   try {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
       admin_pid: data.admin_pid || '', // Needs init
       league_k_factor: data.league_k_factor || 40,
-      is_public: data.is_public || true,
+      is_public: data.is_public,
       league_end_date: data.league_end_date || null,
       league_name: data.league_name || 'New League',
       starting_elo: 800,
@@ -158,6 +158,7 @@ export const createLeague = async (data={}) => {
 
       elo_info: {},
       players: [],
+      password: data.password,
     });
     // Add admin to players and elo_info
     await joinLeague(customId, data.admin_pid);
@@ -195,13 +196,6 @@ export const joinLeague = async (league_id, user_id) => {
     const playerDoc = await getDoc(playerRef);
     if (!playerDoc.exists()) { throw new Error('User not found'); }
     const playerData = playerDoc.data();
-    
-    if (!leagueData.is_public) {
-      // League is private... Check if user is in whitelist. Confirms not empty first
-      if (!leagueData.whitelist_pids || !leagueData.whitelist_pids.includes(user_id)) {
-        throw new Error('An invite is required to join this league');
-      }
-    }
 
     if (leagueData.players && leagueData.players.includes(user_id)) {
       throw new Error('You are already a member of this league');
