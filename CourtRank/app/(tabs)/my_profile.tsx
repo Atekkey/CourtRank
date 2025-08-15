@@ -7,6 +7,29 @@ export default function MyProfile() {
   const { user, userInfo, isLoading, logout } = useAuth();
   const [error, setError] = useState(null);
 
+  const [showNotif, setShowNotif] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const editImplemented = false;
+
+  const toggleNotif = () => {
+    setShowNotif(!showNotif);
+    setShowHelp(false);
+    setShowPrivacy(false);
+  };
+
+  const togglePrivacy = () => {
+    setShowPrivacy(!showPrivacy);
+    setShowNotif(false);
+    setShowHelp(false);
+  };
+
+  const toggleHelp = () => {
+    setShowHelp(!showHelp);
+    setShowNotif(false);
+    setShowPrivacy(false);
+  };
+
   const handleLogout = () => {
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to sign out?')) {
@@ -80,17 +103,20 @@ export default function MyProfile() {
       
       <View style={styles.settingsCard}>
         <Text style={styles.cardTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingItem}>
+        {editImplemented && <TouchableOpacity style={styles.settingItem}>
           <Text style={styles.settingText}>Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
+        </TouchableOpacity>}
+        <TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
           <Text style={styles.settingText}>Notifications</Text>
+          {showNotif && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
+        <TouchableOpacity style={styles.settingItem} onPress={() => togglePrivacy()}>
           <Text style={styles.settingText}>Privacy Settings</Text>
+          {showPrivacy && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
+        <TouchableOpacity style={styles.settingItem} onPress={() => toggleHelp()}>
           <Text style={styles.settingText}>Help & Support</Text>
+          {showHelp && <Text style={styles.settingSubtext}>Email ajattek@gmail.com for assistance</Text>}
         </TouchableOpacity>
       </View>
 
@@ -189,6 +215,10 @@ const styles = StyleSheet.create({
   settingText: {
     fontSize: 16,
     color: '#333',
+  },
+  settingSubtext: {
+    fontSize: 14,
+    color: '#777',
   },
   logoutCard: {
     backgroundColor: 'white',

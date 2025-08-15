@@ -10,47 +10,10 @@ import {
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged,
-  GoogleAuthProvider, 
-  signInWithCredential,
   signOut as firebaseSignOut,
   User as FirebaseUser
 } from 'firebase/auth';
 import { db, auth } from './firebaseConfig';
-
-// WebBrowser.maybeCompleteAuthSession();
-// export const signInWithGoogle = async () => {
-//   try {
-//     const request = new Google.GoogleAuthRequest({
-//       clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID, 
-//       scopes: ['profile', 'email'],
-//       responseType: Google.ResponseType.IdToken,
-//     });
-//     const result = await request.promptAsync();
-//     if (result.type === 'success') {
-//       const { id_token } = result.params;
-//       // Create Firebase credential
-//       const credential = GoogleAuthProvider.credential(id_token);
-//       const userCredential = await signInWithCredential(auth, credential);
-//       const user = userCredential.user;
-//       await createOrUpdateUserProfile(user, {
-//         first_name: user.displayName?.split(' ')[0] || '',
-//         last_name: user.displayName?.split(' ').slice(1).join(' ') || '',
-//         email: user.email || '',
-//         photo_url: user.photoURL || '',
-//         provider: 'google'
-//       });
-//       return user;
-//     } else {
-//       throw new Error('Google sign-in was cancelled');
-//     }
-//   } catch (error) {
-//     console.error('Google Sign-In Error:', error);
-//     throw error;
-//   }
-// };
-
-
-// Auth Functions
 
 export const registerPlayer = async (email, password, userData) => {
   let user = null;
@@ -309,31 +272,3 @@ export const getAllMatches = async () => {
     throw error;
   }
 }
-
-// Real-time listeners
-export const subscribeToLeagues = (callback) => {
-  const unsubscribe = onSnapshot(collection(db, 'leagues'), (snapshot) => {
-    const leagues = [];
-    snapshot.forEach((doc) => {
-      leagues.push({ league_id: doc.id, ...doc.data() });
-    });
-    callback(leagues);
-  });
-  return unsubscribe;
-};
-
-export const subscribeToUserLeagues = (user_id, callback) => {
-  const q = query(
-    collection(db, 'leagues'),
-    where('players', 'array-contains', user_id)
-  );
-  
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const leagues = [];
-    snapshot.forEach((doc) => {
-      leagues.push({ league_id: doc.id, ...doc.data() });
-    });
-    callback(leagues);
-  });
-  return unsubscribe;
-};

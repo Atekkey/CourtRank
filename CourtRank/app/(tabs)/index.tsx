@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserNotifications, subscribeToUserNotifications } from '../../services/firebaseService';
+import { getUserNotifications } from '../../services/firebaseService';
 
 const screenWidth = Dimensions.get('window').width;
-
+const eloHistoryImplemented = false;
 // Mock data for ELO over time
 const mockEloData = {
   labels: ['1/25', '2/25', '3/25', '4/25', '5/25', '6/25'],
@@ -88,8 +88,8 @@ export default function Index() {
         </View>
       </View>
 
-      {/* ELO Chart */}
-      <View style={styles.chartContainer}>
+
+      {eloHistoryImplemented && <View style={styles.chartContainer}>
         <Text style={styles.sectionTitle}>ELO History</Text>
         <LineChart
           data={mockEloData}
@@ -113,7 +113,7 @@ export default function Index() {
           </View>
         ))}
       </View>
-      </View>
+      </View>}
 
       {/* Announcements */}
       <View style={styles.announcementsContainer}>
@@ -144,13 +144,8 @@ export default function Index() {
                 </View>
                 <View style={styles.announcementContent}>
                   <Text style={styles.announcementTitle}>{announcement?.header || ""}</Text>
-                  <Text style={styles.announcementLeague}>{announcement?.league_name || ""}</Text>
+                  <Text style={styles.announcementLeague}>{announcement?.league_name || ""} --- {announcement?.timestamp.toDate().toLocaleDateString().slice(0,-5)}</Text>
                 </View>
-                {announcement?.isNew && (
-                  <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>NEW</Text>
-                  </View>
-                )}
               </View>
 
               <Text style={styles.announcementMessage}>{announcement?.body || ""}</Text>

@@ -30,7 +30,6 @@ export default function MyLeagues() {
   const privateImplemented = true;
   // Log & Search
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState([]);
   const players = curLeague ? Object.entries(curLeague.elo_info) : [];
   const filteredPlayers = players.filter(
     ([id, info]) => 
@@ -45,7 +44,6 @@ export default function MyLeagues() {
   // Match History
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
-  const [allMatches, setAllMatches] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -71,7 +69,6 @@ export default function MyLeagues() {
       setMyLeagues(leagues);
       fetchAllMatchHistory();
     } catch (error) {
-      setLoading(false);
       console.error('Error fetching my leagues:', error);
     }
     setLoading(false);
@@ -79,9 +76,11 @@ export default function MyLeagues() {
 
   const handleLeaveLeague = async (leagueId, leagueName) => {
     try {
-      var proceed = false;
       if (Platform.OS === 'web') {
-        proceed = window.confirm(`Leave ${leagueName}?`);
+        const proceed = window.confirm(`Leave ${leagueName}?`);
+        if (!proceed) return;
+        await leaveLeague(leagueId, user?.uid);
+        handleRefresh();
       } else {
         Alert.alert(
           'Leave League',
@@ -92,15 +91,17 @@ export default function MyLeagues() {
               text: 'Leave', 
               style: 'destructive',
               onPress: async () => {
-                proceed = true;
+                try {
+                  await leaveLeague(leagueId, user?.uid);
+                  handleRefresh();
+                } catch (error) {
+                  console.error('Error leaving league:', error);
+                }
               }
             }
           ]
         );
       }
-      if (!proceed) return;
-      await leaveLeague(leagueId, user?.uid);
-      handleRefresh();
 
     } catch (error) {
       if (Platform.OS === 'web') {
@@ -109,6 +110,7 @@ export default function MyLeagues() {
         Alert.alert('Error', `Failed to leave league. Please try again. ${error.message}`);
       }
     }
+    
   };
 
   // Small Helpers FXNs
@@ -133,7 +135,7 @@ export default function MyLeagues() {
   const getWinRate = (wins, losses, ties) => {
     const total = wins + losses + ties;
     if (total === 0) return 0;
-    return ((wins + ties * 0.5) / total * 100).toFixed(1);
+    return (((wins + ties * 0.5) / total) * 100).toFixed(1);
   };
 
   // Header Displays
