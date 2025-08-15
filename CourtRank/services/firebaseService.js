@@ -150,7 +150,6 @@ export const createLeague = async (data={}) => {
       league_name: data.league_name || 'New League',
       starting_elo: 800,
       created_at: new Date(),
-      matches: [],
 
       league_id: customId,
       location: data.location || '',
@@ -298,7 +297,6 @@ export const getAllMatches = async () => {
   try {
     const q = query(
       collection(db, 'matches'),
-      // where('league_id', '==', league_id),
       orderBy('timestamp', 'desc')
     );
     const matches = [];

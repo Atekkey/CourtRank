@@ -68,7 +68,6 @@ export default function Index() {
         <Text style={styles.title}>CourtRank</Text>
       </View>
 
-      {/* Profile Section with Circular Banner */}
       <View style={styles.profileContainer}>
         <View style={styles.circularBanner}>
           <View style={styles.profileImageContainer}>

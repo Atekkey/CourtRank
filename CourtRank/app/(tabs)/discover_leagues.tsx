@@ -61,7 +61,7 @@ export default function DiscoverLeagues() {
   };
 
   const handleJoinLeague = async (leagueId) => {
-    if (!user || !user.uid) {
+    if (!user || !user?.uid) {
       if (Platform.OS === 'web') {
         window.alert('You must be logged in to join a league');
         return;
@@ -72,7 +72,7 @@ export default function DiscoverLeagues() {
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to join this league?')) {
         try {
-          await joinLeague(leagueId, user.uid);
+          await joinLeague(leagueId, user?.uid);
           Alert.alert('Success', 'You have joined the league!');
           const updatedLeagues = await getLeagues();
           setLeagues(updatedLeagues);
@@ -92,7 +92,7 @@ export default function DiscoverLeagues() {
               text: 'Join', 
               onPress: async () => {
                 try {
-                  await joinLeague(leagueId, user.uid);
+                  await joinLeague(leagueId, user?.uid);
                   Alert.alert('Success', 'You have joined the league!');
                   const updatedLeagues = await getLeagues();
                   setLeagues(updatedLeagues);
@@ -285,16 +285,16 @@ export default function DiscoverLeagues() {
             <TouchableOpacity
               style={[
                 styles.joinButton,
-                league.players.some(player => player === user.uid) && styles.joinButtonDisabled,
-                (!league.is_public && !league.players.some(player => player === user.uid)) &&
+                league.players.some(player => player === user?.uid) && styles.joinButtonDisabled,
+                (!league.is_public && !league.players.some(player => player === user?.uid)) &&
                  {backgroundColor: "rgba(117, 117, 236, 1)"}
               ]}
               onPress={() => joinLeagueClicked(league)}
-              disabled={league.players.some(player => player === user.uid)}
+              disabled={league.players.some(player => player === user?.uid)}
             >
               <Text style={styles.joinButtonText}>
                 {(() => {
-                  if (user.uid && league.players.some(player => player === user.uid)) {
+                  if (user?.uid && league.players.some(player => player === user?.uid)) {
                     return 'Already Joined';
                   } else if(!(league.is_public)) {
                     return 'Enter Password';

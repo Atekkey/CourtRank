@@ -573,6 +573,7 @@ export default function MyLeagues() {
       win_team: winTeamClean,
       loss_team: lossTeamClean,
       timestamp: new Date(),
+      processed: false,
     };
 
     const result = await createMatch(matchData);
@@ -879,17 +880,17 @@ export default function MyLeagues() {
       {/* W-T-L Record */}
       <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.wins ?? 0}</Text>
           <Text style={styles.recordLabel}>Wins</Text>
         </View>
         <View style={styles.recordSeparator} />
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.ties ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.ties ?? 0}</Text>
           <Text style={styles.recordLabel}>Ties</Text>
         </View>
         <View style={styles.recordSeparator} />
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.losses ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.losses ?? 0}</Text>
           <Text style={styles.recordLabel}>Losses</Text>
         </View>
       </View>
