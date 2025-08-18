@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { loginUser, signInWithGoogle } from '../../services/firebaseService';
+import { loginUser, useGoogleAuth } from '../../services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const { request, response, signInWithGoogle } = useGoogleAuth();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -40,13 +41,16 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('[RegisterScreen] handleGoogleSignUp called');
+    console.log("useGoogleAuth: ", useGoogleAuth);
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      console.log('Signed in as:', user.displayName);
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('Google Sign-In error:', error);
-      Alert.alert('Sign-In Failed', 'An error occurred during Google sign-in');
+      console.error('Google Sign-Up error:', error);
+      Alert.alert('Sign-Up Failed', 'An error occurred during Google sign-up');
     } finally {
       setGoogleLoading(false);
     }

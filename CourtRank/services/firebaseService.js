@@ -1,6 +1,3 @@
-// import * as Google from 'expo-auth-session/providers/google';
-// import * as WebBrowser from 'expo-web-browser';
-
 import { 
   collection, addDoc, getDocs, doc, updateDoc, deleteDoc,getDoc,
   query, where, orderBy, onSnapshot,setDoc,
@@ -10,11 +7,91 @@ import {
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged,
+
   signOut as firebaseSignOut,
-  User as FirebaseUser
+  User as FirebaseUser,
+  getRedirectResult
 } from 'firebase/auth';
 import { db, auth } from './firebaseConfig';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
+import { makeRedirectUri } from 'expo-auth-session';
 
+
+
+
+// Sign in with Google
+
+// *NOTE: These env variables will not process on web, only through expo
+const { WEB_CLIENT_ID, IOS_CLIENT_ID } = Constants.expoConfig.extra;
+
+WebBrowser.maybeCompleteAuthSession();
+
+const redirectUri = makeRedirectUri({
+  scheme: 'courtrank',
+  path: 'redirect'
+});
+
+export function useGoogleAuth() {
+  console.log('[useGoogleAuth] Hook initialized');
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    webClientId: WEB_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
+    redirectUri: redirectUri,
+    scopes: ['profile', 'email'],
+  });
+
+  async function signInWithGoogle() {
+    if (!promptAsync) throw new Error('Google Auth request not ready');
+
+    const result = await promptAsync();
+
+    if (result?.type !== 'success') {
+      throw new Error('Google sign-in was cancelled or failed');
+    }
+
+    const { id_token } = result.params;
+    const credential = GoogleAuthProvider.credential(id_token);
+    const userCredential = await signInWithCredential(auth, credential);
+    const user = userCredential.user;
+
+    await createPlayerDoc(user);
+
+    return user;
+  }
+
+  return { request, response, signInWithGoogle };
+}
+
+async function createPlayerDoc(user) {
+  console.log("[firebaseService.js]: Creating player doc for user ", user);
+  const playerRef = doc(db, "players", user.uid);
+  console.log("player ref ", playerRef);
+  const docSnap = await getDoc(playerRef);
+  console.log("doc " , doc);
+
+  if (!docSnap.exists()) {
+    const displayName = user.displayName || '';
+    const [firstName, ...lastNameParts] = displayName.split(' ');
+    const lastName = lastNameParts.join(' ');
+
+    await setDoc(playerRef, {
+      created_at: new Date(),
+      email: user.email || '',
+      first_name: firstName || '',
+      last_name: lastName || '',
+      league_info: [],
+      photo_URL: user.photoURL || '',
+    });
+
+    console.log('New player document created for:', user.email);
+  } else {
+    console.log('Player document already exists for:', user.email);
+  }
+}
+
+// Auth Functions
 export const registerPlayer = async (email, password, userData) => {
   let user = null;
   try {
@@ -29,6 +106,7 @@ export const registerPlayer = async (email, password, userData) => {
       first_name: userData.first_name,
       last_name: userData.last_name,
       league_info: [],
+      photo_URL: "",
       // Note, player_id not stored bc it is docID
     });
 
