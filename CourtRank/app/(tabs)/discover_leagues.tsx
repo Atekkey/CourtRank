@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal } from 'react-native';
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -10,6 +10,10 @@ export default function DiscoverLeagues() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user, userInfo, isLoading } = useAuth();
+  const [showPassModal, setShowPassModal] = useState(false);
+  const [password, setPassword] = useState("");
+  const [hiddenPass, setHiddenPass] = useState("");
+  const [selLeague, setSelLeague] = useState(null);
 
   // NEW: Fetch leagues from database on component mount
   useEffect(() => {
@@ -48,8 +52,16 @@ export default function DiscoverLeagues() {
     setFilteredLeagues(filtered);
   }, [searchQuery, leagues]);
 
+  const joinLeagueClicked = (league) => {
+    if (league.is_public) {
+      handleJoinLeague(league.league_id);
+    } else {
+      initialPassClicked(league);
+    }
+  };
+
   const handleJoinLeague = async (leagueId) => {
-    if (!user || !user.uid) {
+    if (!user || !user?.uid) {
       if (Platform.OS === 'web') {
         window.alert('You must be logged in to join a league');
         return;
@@ -60,7 +72,7 @@ export default function DiscoverLeagues() {
     if (Platform.OS === 'web') {
       if (window.confirm('Are you sure you want to join this league?')) {
         try {
-          await joinLeague(leagueId, user.uid);
+          await joinLeague(leagueId, user?.uid);
           Alert.alert('Success', 'You have joined the league!');
           const updatedLeagues = await getLeagues();
           setLeagues(updatedLeagues);
@@ -80,7 +92,7 @@ export default function DiscoverLeagues() {
               text: 'Join', 
               onPress: async () => {
                 try {
-                  await joinLeague(leagueId, user.uid);
+                  await joinLeague(leagueId, user?.uid);
                   Alert.alert('Success', 'You have joined the league!');
                   const updatedLeagues = await getLeagues();
                   setLeagues(updatedLeagues);
@@ -138,8 +150,85 @@ export default function DiscoverLeagues() {
     );
   }
 
+  const initialPassClicked = (league) => {
+    setShowPassModal(true);
+    setHiddenPass(league.password);
+    setSelLeague(league);
+  };
+
+  const passUnclicked = () => {
+    setShowPassModal(false);
+    setPassword("");
+    setHiddenPass("");
+    setSelLeague(null);
+  };
+
+  const attemptJoin = async () => {
+    if ((password === hiddenPass) && (password !== "") && selLeague) {
+      await handleJoinLeague(selLeague.league_id);
+      passUnclicked();
+    } else {
+      if (Platform.OS === 'web') {
+        window.alert('Incorrect password. Please try again.');
+      } else {
+        Alert.alert('Error', 'Incorrect password. Please try again.');
+      }
+    }
+  };
+
+  const passModal = (
+      <Modal
+          visible={showPassModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => {passUnclicked()} }
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Enter Password</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => {passUnclicked()}}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+  
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={password}
+                  onChangeText={(text) => setPassword(text)}
+                  placeholder=""
+                  maxLength={20}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => {passUnclicked()}}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.enterButton}
+                onPress={() => {attemptJoin();}}
+              >
+                <Text style={styles.enterButtonText}>Join League</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+    );
+
   return (
     <ScrollView style={styles.container}>
+      {passModal}
       <View style={styles.header}>
         <Text style={styles.title}>Discover Leagues</Text>
         <Text style={styles.subtitle}>Find and join leagues near you</Text>
@@ -196,15 +285,19 @@ export default function DiscoverLeagues() {
             <TouchableOpacity
               style={[
                 styles.joinButton,
-                league.players.some(player => player === user.uid) && styles.joinButtonDisabled
+                league.players.some(player => player === user?.uid) && styles.joinButtonDisabled,
+                (!league.is_public && !league.players.some(player => player === user?.uid)) &&
+                 {backgroundColor: "rgba(117, 117, 236, 1)"}
               ]}
-              onPress={() => handleJoinLeague(league.league_id)}
-              disabled={league.players.some(player => player === user.uid)}
+              onPress={() => joinLeagueClicked(league)}
+              disabled={league.players.some(player => player === user?.uid)}
             >
               <Text style={styles.joinButtonText}>
                 {(() => {
-                  if (user.uid && league.players.some(player => player === user.uid)) {
+                  if (user?.uid && league.players.some(player => player === user?.uid)) {
                     return 'Already Joined';
+                  } else if(!(league.is_public)) {
+                    return 'Enter Password';
                   } else {
                     return 'Join League';
                   }
@@ -219,6 +312,85 @@ export default function DiscoverLeagues() {
 }
 
 const styles = StyleSheet.create({
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: 'white',
+  },
+  closeButton: {
+    padding: 5,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#2f95dc',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  enterButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  enterButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  cancelButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, getAllMatchesStruct } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -24,10 +24,12 @@ export default function MyLeagues() {
     whitelist_pids: [],
     players: [],
     description: "",
+    password: "",
   });
+  const expiryImplemented = false;
+  const privateImplemented = true;
   // Log & Search
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState([]);
   const players = curLeague ? Object.entries(curLeague.elo_info) : [];
   const filteredPlayers = players.filter(
     ([id, info]) => 
@@ -35,26 +37,50 @@ export default function MyLeagues() {
   );
   const [winTeam, setWinTeam] = useState([]);
   const [lossTeam, setLossTeam] = useState([]);
-
-  const [messageHeader, setMessageHeader] = useState("New Notification");
+  // Notifs
+  const [messageHeader, setMessageHeader] = useState("");
   const [messageBody, setMessageBody] = useState("");
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  // Match History
+  const [matchHistory, setMatchHistory] = useState([]);
+  const [showMatchModal, setShowMatchModal] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Fetch user's leagues from backend
+    setLoading(true);
+    const fetchMyLeagues = async () => {
+      try {
+        const leagues = await getUserLeagues(user?.uid);
+        setMyLeagues(leagues);
+      } catch (error) {
+        console.error('Error fetching my leagues:', error);
+      }
+    };
+    fetchAllMatchHistory();
+    fetchMyLeagues();
+    setLoading(false);
+  }, [user?.uid]);
 
   const handleRefresh = async () => {
+    setLoading(true);
     try {
       const leagues = await getUserLeagues(user?.uid);
       setMyLeagues(leagues);
+      fetchAllMatchHistory();
     } catch (error) {
       console.error('Error fetching my leagues:', error);
     }
-    return; // TODO
+    setLoading(false);
   };
 
   const handleLeaveLeague = async (leagueId, leagueName) => {
     try {
-      var proceed = false;
       if (Platform.OS === 'web') {
-        proceed = window.confirm(`Leave ${leagueName}?`);
+        const proceed = window.confirm(`Leave ${leagueName}?`);
+        if (!proceed) return;
+        await leaveLeague(leagueId, user?.uid);
+        handleRefresh();
       } else {
         Alert.alert(
           'Leave League',
@@ -65,15 +91,17 @@ export default function MyLeagues() {
               text: 'Leave', 
               style: 'destructive',
               onPress: async () => {
-                proceed = true;
+                try {
+                  await leaveLeague(leagueId, user?.uid);
+                  handleRefresh();
+                } catch (error) {
+                  console.error('Error leaving league:', error);
+                }
               }
             }
           ]
         );
       }
-      if (!proceed) return;
-      await leaveLeague(leagueId, user?.uid);
-      handleRefresh();
 
     } catch (error) {
       if (Platform.OS === 'web') {
@@ -82,6 +110,7 @@ export default function MyLeagues() {
         Alert.alert('Error', `Failed to leave league. Please try again. ${error.message}`);
       }
     }
+    
   };
 
   // Small Helpers FXNs
@@ -106,22 +135,8 @@ export default function MyLeagues() {
   const getWinRate = (wins, losses, ties) => {
     const total = wins + losses + ties;
     if (total === 0) return 0;
-    return ((wins + ties * 0.5) / total * 100).toFixed(1);
+    return (((wins + ties * 0.5) / total) * 100).toFixed(1);
   };
-
-  useEffect(() => {
-    // Fetch user's leagues from backend
-    const fetchMyLeagues = async () => {
-      try {
-        const leagues = await getUserLeagues(user?.uid);
-        setMyLeagues(leagues);
-      } catch (error) {
-        console.error('Error fetching my leagues:', error);
-      }
-    };
-
-    fetchMyLeagues();
-  }, [user?.uid]);
 
   // Header Displays
   const header = (
@@ -137,9 +152,16 @@ export default function MyLeagues() {
         <Text style={[styles.refreshButtonText]}>🔄</Text>
       </TouchableOpacity>
 
-      <Text style={styles.resultsText}>
+      {!loading ? 
+      (<Text style={styles.resultsText}>
         {myLeagues.length} league{myLeagues.length !== 1 ? 's' : ''} joined
-      </Text>
+      </Text>)
+      : 
+      ( <Text style={styles.resultsText}>
+        loading...
+      </Text>)
+      }
+      
     </View>
     
   );
@@ -205,18 +227,128 @@ export default function MyLeagues() {
   );
 
   // NOTIFICATION FXNS
-  const notifClicked = async (leagueId, leagueName) => {
-    console.log(`Notification clicked for League ID: ${leagueId}, Name: ${leagueName}`);
+  const notifClicked = async (league) => {
+    setCurLeague(league);
+    setShowNotifModal(true);
   };
+
+  const notifUnclicked = async () => {
+    setShowNotifModal(false);
+    setMessageBody("");
+    setMessageHeader("");
+  };
+
+  const handleCreateNotif = async () => {
+    try {
+      await createNotification({
+        admin_name: `${userInfo.first_name} ${userInfo.last_name}`,
+        league_name: curLeague.league_name,
+        players: curLeague.players,
+        header: messageHeader,
+        body: messageBody,
+        timestamp: new Date(),
+      });
+      if (Platform.OS === 'web') {
+        window.alert("Notification Sent!");
+      } else {
+        Alert.alert('Success', 'Notification Sent!');
+      }
+      notifUnclicked();
+    } catch (error) {
+      if (Platform.OS === 'web') {
+        window.alert("Notification Creation Failed.");
+      } else {
+        Alert.alert('Error', 'Notification Creation Failed.');
+      }
+    }
+  }
+
+  const notificationModal = (
+    <Modal
+      visible={showNotifModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => notifUnclicked()}
+    >
+      <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Send Notification</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => notifUnclicked()}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* League Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Message Subject *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={messageHeader}
+                onChangeText={(text) => setMessageHeader(text)}
+                placeholder="Enter message subject"
+                maxLength={50}
+              />
+            </View>
+
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Message Body *</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={messageBody}
+                onChangeText={(text) => setMessageBody(text)}
+                placeholder="Message body"
+                multiline
+                numberOfLines={5}
+                maxLength={500}
+              />
+            </View>
+
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => notifUnclicked()}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={() => handleCreateNotif()}
+            >
+              <Text style={styles.createButtonText}>Send Notification</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+    </Modal>
+  );
 
   // CREATING A LEAGUE
   const handleCreateLeague = async () => {
     // Validate required fields
     if (!newLeague.league_name.trim()) {
-      Alert.alert('Error', 'Please enter a league name.');
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Please enter a league name.'`);
+      } else {
+        Alert.alert('Error', 'Please enter a league name.');
+      }
       return;
     }
-
+    if (!newLeague.password.trim() && (!newLeague.is_public)) {
+      if (Platform.OS === 'web') {
+        window.alert(`'Error', 'Please enter a league password.'`);
+      } else {
+        Alert.alert('Error', 'Please enter a league password.');
+      }
+      return;
+    }
     try {
       await createLeague(newLeague);
       
@@ -237,6 +369,7 @@ export default function MyLeagues() {
         whitelist_pids: [],
         players: [],
         description: "",
+        password: ""
       });
 
       // Show success notification
@@ -321,19 +454,19 @@ export default function MyLeagues() {
             </View>
 
             {/* Privacy Setting */}
-            <View style={styles.inputGroup}>
+            {privateImplemented && (<View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>League Privacy *</Text>
               <View style={styles.privacyOptions}>
                 <TouchableOpacity
                   style={[
                     styles.privacyOption,
-                    newLeague.isPublic && styles.privacyOptionSelected
+                    newLeague.is_public && styles.privacyOptionSelected
                   ]}
-                  onPress={() => setNewLeague({...newLeague, isPublic: true})}
+                  onPress={() => setNewLeague({...newLeague, is_public: true})}
                 >
                   <Text style={[
                     styles.privacyOptionText,
-                    newLeague.isPublic && styles.privacyOptionTextSelected
+                    newLeague.is_public && styles.privacyOptionTextSelected
                   ]}>
                     🌐 Public
                   </Text>
@@ -343,20 +476,35 @@ export default function MyLeagues() {
                 <TouchableOpacity
                   style={[
                     styles.privacyOption,
-                    !newLeague.isPublic && styles.privacyOptionSelected
+                    !newLeague.is_public && styles.privacyOptionSelected
                   ]}
-                  onPress={() => setNewLeague({...newLeague, isPublic: false})}
+                  onPress={() => setNewLeague({...newLeague, is_public: false})}
                 >
                   <Text style={[
                     styles.privacyOptionText,
-                    !newLeague.isPublic && styles.privacyOptionTextSelected
+                    !newLeague.is_public && styles.privacyOptionTextSelected
                   ]}>
                     🔒 Private
                   </Text>
-                  <Text style={styles.privacyOptionSubtext}>Visible, but Invite required to join</Text>
+                  <Text style={styles.privacyOptionSubtext}>Visible, Password required to join</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </View>)}
+
+            {/* Password */}
+            {newLeague.is_public === false && (<View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password *</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={newLeague.password}
+                onChangeText={(text) => setNewLeague({...newLeague, password: text})}
+                placeholder="Enter a short password for the league"
+                multiline
+                numberOfLines={1}
+                maxLength={15}
+              />
+            </View>)}
+
           </ScrollView>
 
           {/* Action Buttons */}
@@ -385,8 +533,69 @@ export default function MyLeagues() {
     setShowLogModal(true);
   };
   
-  const handleLogGame = async (leagueId, leagueName) => {
-    return; // TODO
+  const handleLogGamePressed = async () => {
+    // Is User in the Game
+    const userPresent = winTeam.includes(user?.uid) || lossTeam.includes(user?.uid);
+    if (!userPresent) {
+      if (Platform.OS === 'web') {
+        window.alert("You must be a player in the league to log a game.");
+      } else {
+        Alert.alert("Error", "You must be a player in the league to log a game.");
+      }
+      return;
+    }
+    const validTeams = winTeam.length === lossTeam.length;
+    if (!validTeams) {
+      if (Platform.OS === 'web') {
+        window.alert("Both teams must have the same number of players.");
+      } else {
+        Alert.alert("Error", "Both teams must have the same number of players.");
+      }
+      return;
+    }
+    if (!curLeague.league_id) {
+      if (Platform.OS === 'web') {
+        window.alert("League Error");
+      } else {
+        Alert.alert("Error", "League Error");
+      }
+      return;
+    }
+
+    // Continue
+    const winTeamInfo = getPlayerInfoArray(winTeam);
+    const winTeamClean = Object.fromEntries(winTeamInfo);
+
+    const lossTeamInfo = getPlayerInfoArray(lossTeam);
+    const lossTeamClean = Object.fromEntries(lossTeamInfo);
+
+    const matchData = {
+      league_id: curLeague.league_id,
+      league_k_factor: curLeague.league_k_factor,
+      win_team: winTeamClean,
+      loss_team: lossTeamClean,
+      timestamp: new Date(),
+      processed: false,
+    };
+
+    const result = await createMatch(matchData);
+    if (!result) {
+      if (Platform.OS === 'web') {
+        window.alert("Failed to create match.");
+      } else {
+        Alert.alert("Error", "Failed to create match.");
+      }
+    }
+    if (result) {
+      if (Platform.OS === 'web') {
+        window.alert("Match created successfully.");
+      } else {
+        Alert.alert("Success", "Match created successfully.");
+      }
+      setWinTeam([]);
+      setLossTeam([]);
+      setShowLogModal(false);
+    }
   };
 
   const toggleWin = (id) => {
@@ -420,6 +629,22 @@ export default function MyLeagues() {
         const info = curLeague.elo_info[pid];
         if (!info) return null;
         return `${info.first_name} ${info.last_name}`;
+      })
+      .filter(Boolean);
+  };
+
+  const getPlayerInfoArray = (team) => {
+    if (!curLeague || !curLeague.elo_info) return [];
+    return team.map(
+      pid => {
+        const info = curLeague.elo_info[pid];
+        if (!info) return null;
+        const pidInfo = {
+          first_name: info.first_name,
+          last_name: info.last_name,
+          elo: info.elo
+        }
+        return [pid, pidInfo];
       })
       .filter(Boolean);
   };
@@ -533,7 +758,7 @@ export default function MyLeagues() {
             
             <TouchableOpacity 
               style={styles.createButton}
-              onPress={handleLogGame}
+              onPress={() => handleLogGamePressed()}
             >
               <Text style={styles.createButtonText}>Log Game</Text>
             </TouchableOpacity>
@@ -542,25 +767,98 @@ export default function MyLeagues() {
       </Modal>
   );
 
+  // Match FXNs
+  const matchPressed = (league) => {
+    setCurLeague(league);
+    setShowMatchModal(true);
+  };
+
+  const fetchAllMatchHistory = async () => {
+    try {
+      const matches = await getAllMatches();
+      setMatchHistory(matches);
+    } catch (error) {
+    }
+  };
+
+  const getMatchPlayers = (team) => {
+    const playerNames = Object.values(team).map(
+      ({first_name, last_name}) => `${first_name} ${last_name}`
+    );
+    return playerNames;
+  };
+  
+  const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
+    if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
+    const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    return (
+      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+        
+        <View style={[styles_match.card, styles_match.winnerCard]}>
+          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text>
+        </View>
+
+        <View style={[styles_match.card, styles_match.loserCard]}>
+          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text>
+        </View>
+
+        <View style={[styles_match.card, styles_match.dateCard]}>
+          <Text style={styles_match.names}>{date}</Text>
+        </View>
+
+      </View>
+    );
+  })) : null;
+
+  const matchHistoryModal = (
+    <Modal
+        visible={showMatchModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMatchModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Match History</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowMatchModal(false)}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {matchMap}
+          </ScrollView>
+
+        </View>
+      </Modal>
+  );
+  
+
   // LEAGUE CARDS
   const leagueCards = myLeagues.map(league => { 
     const stats = league?.elo_info[user?.uid];
     const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
     const LID = league.league_id;
+    const leagueExpDate = league.league_end_date;
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
+
     return (
-    <View key={LID} style={styles.leagueCard}>
+    <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
       <View style={styles.leagueHeader}>
         <Text style={styles.leagueName}>{league.league_name}</Text>
-        {user?.uid == league?.admin_pid && (<TouchableOpacity style={styles.leagueEnd} onPress={() => console.log("Press")}>
+        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => {}}>
           <Text style={styles.leagueEndText}>📅</Text>
         </TouchableOpacity>)}
       </View>
       
-      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 Location: " + league.location) : "" }</Text>
+      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
       <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
 
       {/* Stats Section */}
-      <View style={styles.statsContainer}>
+      <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>ELO Rating</Text>
           <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
@@ -582,34 +880,34 @@ export default function MyLeagues() {
       </View>
 
       {/* W-T-L Record */}
-      <View style={styles.recordContainer}>
+      <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.wins ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.wins ?? 0}</Text>
           <Text style={styles.recordLabel}>Wins</Text>
         </View>
         <View style={styles.recordSeparator} />
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.ties ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.ties ?? 0}</Text>
           <Text style={styles.recordLabel}>Ties</Text>
         </View>
         <View style={styles.recordSeparator} />
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats.losses ?? 0}</Text>
+           <Text style={styles.recordNumber}>{stats?.losses ?? 0}</Text>
           <Text style={styles.recordLabel}>Losses</Text>
         </View>
       </View>
 
       {/* Log Game Button */}
-      <TouchableOpacity 
+      {(!leagueDidExpire) && (<TouchableOpacity 
         style={styles.logGameButton}
         onPress={() => logPressed(league)}
       >
         <Text style={styles.logGameButtonText}>📊 Log Game</Text>
-      </TouchableOpacity>
+      </TouchableOpacity>)}
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.viewButton}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
           <Text style={styles.viewButtonText}>Match History</Text>
         </TouchableOpacity>
 
@@ -620,7 +918,7 @@ export default function MyLeagues() {
         { user?.uid === league?.admin_pid ? 
         (<TouchableOpacity 
           style={styles.notifButton}
-          onPress={() => notifClicked(LID, league.league_name)}
+          onPress={() => notifClicked(league)}
         >
           <Text style={styles.leaveButtonText}>Send Notification</Text>
         </TouchableOpacity>) 
@@ -646,6 +944,8 @@ export default function MyLeagues() {
       {createLeagueModal}
       {leaderboardModal}
       {logModal}
+      {notificationModal}
+      {matchHistoryModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -883,6 +1183,17 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  leagueCardExpired: {
+    backgroundColor: '#d4d4d4ff',
+    margin: 15,
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   leagueHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -936,6 +1247,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 8,
   },
+  statsContainerExpired: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 15,
+    paddingVertical: 15,
+    backgroundColor: '#dfdfdfff',
+    borderRadius: 8,
+  },
   statItem: {
     alignItems: 'center',
   },
@@ -956,7 +1275,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+  recordContainerExpired: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 15,
+    paddingVertical: 15,
+    backgroundColor: '#dfdfdfff',
     borderRadius: 8,
   },
   recordItem: {
@@ -1038,6 +1366,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
+  },
+  modalNotifContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+    flexDirection: 'column',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1183,5 +1516,41 @@ const styles = StyleSheet.create({
   },
   selectedRow: {
     backgroundColor: '#d0f0d0', // light green for selected
+  },
+});
+
+const styles_match = StyleSheet.create({
+  matchContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  card: {
+    flex: 1,
+    padding: 12,
+    marginHorizontal: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  winnerCard: {
+    flex: 4,
+    backgroundColor: '#72cd75ff', 
+  },
+  loserCard: {
+    flex: 4,
+    backgroundColor: '#ed6a60ff',
+  },
+  dateCard: {
+    flex: 1,
+    backgroundColor: '#a8a8a8ff',
+  },
+  teamName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  names: {
+    fontSize: 14,
+    color: 'white',
   },
 });

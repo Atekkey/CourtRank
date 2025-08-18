@@ -7,10 +7,7 @@ import {
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged,
-  GoogleAuthProvider, 
-  signInWithCredential,
-  signInWithRedirect,
-  signInWithPopup,
+
   signOut as firebaseSignOut,
   User as FirebaseUser,
   getRedirectResult
@@ -20,6 +17,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
+
 
 
 
@@ -153,35 +151,54 @@ export const getCurrentUser = () => {
   });
 };
 
-// League Functions
-
-// Data should have (Bool isPublic, Str admin_pid, Str league_name, Date league_end_date, Number league_k_factor)
-export const createLeague = async (data={}) => {
-
-  let whitelist_pids_ = [];
-  if (data.admin_pid && data.admin_pid.trim() !== '') {
-    whitelist_pids_ = data.is_public ? [data.admin_pid] : [];
+// Notification Functions
+export const getUserNotifications = async (user_id) => {
+  try {
+    const q = query(
+      collection(db, 'notifications'),
+      where('players', 'array-contains', user_id),
+    );
+    const notifications = [];
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      notifications.push({id: doc.id, ...doc.data()});
+    });
+    return notifications;
+  } catch (error) {
+    throw error;
   }
+}
+
+export const createNotification = async (notificationInfo) => {
+  try {
+    const docRef = await addDoc(collection(db, 'notifications'), notificationInfo);
+    return { id: docRef.id, ...notificationInfo };
+  } catch (error) {
+    throw error;
+  }
+}
+
+// League Functions
+export const createLeague = async (data={}) => {
 
   try {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
       admin_pid: data.admin_pid || '', // Needs init
       league_k_factor: data.league_k_factor || 40,
-      is_public: data.is_public || true,
+      is_public: data.is_public,
       league_end_date: data.league_end_date || null,
       league_name: data.league_name || 'New League',
       starting_elo: 800,
       created_at: new Date(),
-      matches: [],
 
       league_id: customId,
       location: data.location || '',
       description: data.description || '',
 
       elo_info: {},
-      whitelist_pids: whitelist_pids_,
       players: [],
+      password: data.password,
     });
     // Add admin to players and elo_info
     await joinLeague(customId, data.admin_pid);
@@ -206,23 +223,6 @@ export const getLeagues = async () => {
   }
 };
 
-export const getUserNotifications = async (user_id) => {
-  try {
-    const q = query(
-      collection(db, 'notifications'),
-      where('players', 'array-contains', user_id),
-    );
-    const notifications = [];
-    const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((doc) => {
-      notifications.push({id: doc.id, ...doc.data()});
-    });
-    return notifications;
-  } catch (error) {
-    throw error;
-  }
-}
-
 export const joinLeague = async (league_id, user_id) => {
   try {
     console.log('Joining league:', league_id, 'for user:', user_id);
@@ -236,13 +236,6 @@ export const joinLeague = async (league_id, user_id) => {
     const playerDoc = await getDoc(playerRef);
     if (!playerDoc.exists()) { throw new Error('User not found'); }
     const playerData = playerDoc.data();
-    
-    if (!leagueData.is_public) {
-      // League is private... Check if user is in whitelist. Confirms not empty first
-      if (!leagueData.whitelist_pids || !leagueData.whitelist_pids.includes(user_id)) {
-        throw new Error('An invite is required to join this league');
-      }
-    }
 
     if (leagueData.players && leagueData.players.includes(user_id)) {
       throw new Error('You are already a member of this league');
@@ -258,7 +251,8 @@ export const joinLeague = async (league_id, user_id) => {
           losses: 0,
           ties: 0,
           first_name: playerData.first_name || '',
-          last_name: playerData.last_name || ''
+          last_name: playerData.last_name || '',
+          score: 0
         }
       }
     }, { merge: true });
@@ -328,62 +322,31 @@ export const getPlayerInfo = async (user_id) => {
   }
 };
 
-/////////////////// All Below Might be unnecessary
 // Match Functions
 export const createMatch = async (matchData) => {
   try {
     const docRef = await addDoc(collection(db, 'matches'), {
-      league_id: matchData.league_id, // League ID
-      league_k_factor: matchData.league_k_factor, // League K-factor
-      winning_players: matchData.winning_players, // Array of player IDs
-      losing_players: matchData.losing_players, // Array of player IDs
-      createdAt: new Date(),
-      // status: 'init'
+      ...matchData,
     });
     return docRef.id;
   } catch (error) {
-    throw error;
+    return null;
   }
 };
 
-// export const updateMatchResult = async (matchId, result) => {
-//   try {
-//     const matchRef = doc(db, 'matches', matchId);
-//     await updateDoc(matchRef, {
-//       result: result,
-//       status: 'completed',
-//       completedAt: new Date()
-//     });
-//   } catch (error) {
-//     throw error;
-//   }
-// };
-
-// Real-time listeners
-
-export const subscribeToLeagues = (callback) => {
-  const unsubscribe = onSnapshot(collection(db, 'leagues'), (snapshot) => {
-    const leagues = [];
-    snapshot.forEach((doc) => {
-      leagues.push({ league_id: doc.id, ...doc.data() });
+export const getAllMatches = async () => {
+  try {
+    const q = query(
+      collection(db, 'matches'),
+      orderBy('timestamp', 'desc')
+    );
+    const matches = [];
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((doc) => {
+      matches.push({id: doc.id, ...doc.data()});
     });
-    callback(leagues);
-  });
-  return unsubscribe;
-};
-
-export const subscribeToUserLeagues = (user_id, callback) => {
-  const q = query(
-    collection(db, 'leagues'),
-    where('players', 'array-contains', user_id)
-  );
-  
-  const unsubscribe = onSnapshot(q, (snapshot) => {
-    const leagues = [];
-    snapshot.forEach((doc) => {
-      leagues.push({ league_id: doc.id, ...doc.data() });
-    });
-    callback(leagues);
-  });
-  return unsubscribe;
-};
+    return matches;
+  } catch (error) {
+    throw error;
+  }
+}
