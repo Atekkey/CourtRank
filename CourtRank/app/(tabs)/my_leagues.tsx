@@ -190,11 +190,13 @@ export default function MyLeagues() {
   const leaderboardMap = (curLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
     const name = pInfo.first_name + " " + pInfo.last_name;
     const rank = i + 1;
+    const [wins, losses] = [pInfo.wins, pInfo.losses];
     const elo = pInfo.elo;
     return (
       <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
         <Text style={[styles.name]}>{name}</Text>
+        <Text style={[styles.name]}>{wins} / {losses}</Text>
         <Text style={[styles.elo, { color: getEloColor(elo || 0) }]}>{elo}    </Text>
       </View>
     );
@@ -218,7 +220,14 @@ export default function MyLeagues() {
             </TouchableOpacity>
           </View>
 
+          
           <ScrollView style={styles.modalContent}>
+            <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
+              <Text style={[styles.rank]}> Rank</Text>
+              <Text style={[styles.name]}>Name</Text>
+              {true && <Text style={[styles.name]}>W / L</Text>}
+              <Text style={[styles.elo]}>Elo    </Text>
+            </View>
             {leaderboardMap}
           </ScrollView>
 
@@ -882,17 +891,17 @@ export default function MyLeagues() {
       {/* W-T-L Record */}
       <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats?.wins ?? 0}</Text>
+           <Text style={styles.recordNumberWin}>{stats?.wins ?? 0}</Text>
           <Text style={styles.recordLabel}>Wins</Text>
         </View>
         <View style={styles.recordSeparator} />
-        <View style={styles.recordItem}>
+        {/* <View style={styles.recordItem}>
            <Text style={styles.recordNumber}>{stats?.ties ?? 0}</Text>
           <Text style={styles.recordLabel}>Ties</Text>
         </View>
-        <View style={styles.recordSeparator} />
+        <View style={styles.recordSeparator} /> */}
         <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats?.losses ?? 0}</Text>
+           <Text style={styles.recordNumberLoss}>{stats?.losses ?? 0}</Text>
           <Text style={styles.recordLabel}>Losses</Text>
         </View>
       </View>
@@ -1092,7 +1101,8 @@ const styles = StyleSheet.create({
   },
   name: {
     flex: 1, 
-    paddingHorizontal: 8,
+    paddingHorizontal: 15,
+    fontWeight: '500',
   },
   elo: {
     width: 60,
@@ -1295,6 +1305,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#2f95dc',
+  },
+  recordNumberWin: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2fdc74ff',
+  },
+  recordNumberLoss: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#da6161ff',
   },
   recordLabel: {
     fontSize: 12,
