@@ -24,7 +24,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 // Sign in with Google
 
 // *NOTE: These env variables will not process on web, only through expo
-const { WEB_CLIENT_ID, IOS_CLIENT_ID } = Constants.expoConfig.extra;
+const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = Constants.expoConfig.extra;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +38,7 @@ export function useGoogleAuth() {
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: WEB_CLIENT_ID,
     iosClientId: IOS_CLIENT_ID,
+    androidClientId: ANDROID_CLIENT_ID,
     redirectUri: redirectUri,
     scopes: ['profile', 'email'],
   });

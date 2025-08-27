@@ -840,9 +840,10 @@ export default function MyLeagues() {
             </TouchableOpacity>
           </View>
 
-          {/* <ScrollView style={styles.modalContent}> */}
+          
+          <View style={styles.spacing}></View>
             {matchMap}
-          {/* </ScrollView> */}
+          
 
         </View>
       </Modal>
@@ -1051,6 +1052,9 @@ const styles_col = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  spacing: {
+    marginVertical: 6,
+  },
   playerRow: {
     flexDirection: 'row',
     alignItems: 'center',
