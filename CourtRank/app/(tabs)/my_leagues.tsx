@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, getAllMatchesStruct } from '../../services/firebaseService';
+import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function MyLeagues() {
@@ -45,6 +45,7 @@ export default function MyLeagues() {
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [loading, setLoading] = useState(false);
+
 
   useEffect(() => {
     // Fetch user's leagues from backend
@@ -197,7 +198,7 @@ export default function MyLeagues() {
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
         <Text style={[styles.name]}>{name}</Text>
         <Text style={[styles.name]}>{wins} / {losses}</Text>
-        <Text style={[styles.elo, { color: getEloColor(elo || 0) }]}>{elo}    </Text>
+        <Text style={[Platform.OS == "web" ? styles.elo : styles.name, { color: getEloColor(elo || 0) }]}>{elo}  </Text>
       </View>
     );
   }) : null;
@@ -221,15 +222,15 @@ export default function MyLeagues() {
           </View>
 
           
-          <ScrollView style={styles.modalContent}>
+          {/* <ScrollView style={styles.modalContent}> */}
             <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
               <Text style={[styles.rank]}> Rank</Text>
               <Text style={[styles.name]}>Name</Text>
               {true && <Text style={[styles.name]}>W / L</Text>}
-              <Text style={[styles.elo]}>Elo    </Text>
+              <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo    </Text>
             </View>
             {leaderboardMap}
-          </ScrollView>
+          {/* </ScrollView> */}
 
         </View>
       </Modal>
@@ -681,8 +682,9 @@ export default function MyLeagues() {
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView>
-            <View style={styles_col.modalContentContainer}>
+
+         {/* <ScrollView> */}
+            <View style={Platform.OS == "web" ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -691,7 +693,7 @@ export default function MyLeagues() {
                   value={search}
                   onChangeText={setSearch}
                 />
-
+                
                 {/* Player List */}
                 <FlatList
                 data={filteredPlayers}
@@ -754,7 +756,8 @@ export default function MyLeagues() {
               </View>
               
             </View>
-          </ScrollView>
+          {/* </ScrollView> */}
+          
 
           {/* Action Buttons */}
           <View style={styles.modalActions}>
@@ -837,9 +840,9 @@ export default function MyLeagues() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
+          {/* <ScrollView style={styles.modalContent}> */}
             {matchMap}
-          </ScrollView>
+          {/* </ScrollView> */}
 
         </View>
       </Modal>
@@ -921,7 +924,10 @@ export default function MyLeagues() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          <Text style={styles.viewButtonText}>Leaderboard</Text>
+          {Platform.OS == "web" ? 
+            <Text style={styles.viewButtonText}>Leaderboard</Text>
+          : <Text style={styles.viewButtonText}>Leader-board</Text>
+          }
         </TouchableOpacity>
         
         { user?.uid === league?.admin_pid ? 
@@ -929,7 +935,11 @@ export default function MyLeagues() {
           style={styles.notifButton}
           onPress={() => notifClicked(league)}
         >
+          {Platform.OS == "web" ? 
           <Text style={styles.leaveButtonText}>Send Notification</Text>
+          :
+          <Text style={styles.leaveButtonText}>Notify Users</Text>
+        }
         </TouchableOpacity>) 
         :
         (<TouchableOpacity 
@@ -945,7 +955,9 @@ export default function MyLeagues() {
   });
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container}
+    refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh}/>}
+    >
       {header}
       {resultsCount}
       {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
@@ -972,6 +984,10 @@ const styles_col = StyleSheet.create({
   flex: 1,
   flexDirection: 'row',
   },
+  modalContentContainerDownwards: {
+    flex: 1,
+    flexDirection: 'col',
+    },
   leftColumn: {
     flex: 1, 
     borderRightWidth: 2,
@@ -1400,6 +1416,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#2f95dc',
+  },
+  modalTitleNotWeb: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: 'white',
   },
   modalTitle: {
     fontSize: 20,

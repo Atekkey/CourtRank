@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl } from 'react-native';
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -15,28 +15,60 @@ export default function DiscoverLeagues() {
   const [hiddenPass, setHiddenPass] = useState("");
   const [selLeague, setSelLeague] = useState(null);
 
-  // NEW: Fetch leagues from database on component mount
-  useEffect(() => {
-    const fetchLeagues = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const fetchedLeagues = await getLeagues();
-        setLeagues(fetchedLeagues);
-        setFilteredLeagues(fetchedLeagues);
-      } catch (err) {
-        console.error('Error fetching leagues:', err);
-        setError('Failed to load leagues. Please try again.');
-        // Fallback to empty array on error
-        setLeagues([]);
-        setFilteredLeagues([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Set Refresh
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      console.log("Refreshed!");
+      setRefreshing(false);
+    }, 2000);
+  };
+  
+  const fetchLeagues = useCallback(async () => {
+    try {
+      setError(null);
+      if (!refreshing) setLoading(true); // avoid double spinners
+      const fetchedLeagues = await getLeagues();
+      setLeagues(fetchedLeagues);
+      setFilteredLeagues(fetchedLeagues);
+    } catch (err) {
+      console.error("Error fetching leagues:", err);
+      setError("Failed to load leagues. Please try again.");
+      setLeagues([]);
+      setFilteredLeagues([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [refreshing]);
 
+  useEffect(() => {
     fetchLeagues();
-  }, []);
+  }, [fetchLeagues]);
+  
+  // NEW: Fetch leagues from database on component mount
+  // useEffect(() => {
+  //   const fetchLeagues = async () => {
+  //     try {
+  //       setLoading(true);
+  //       setError(null);
+  //       const fetchedLeagues = await getLeagues();
+  //       setLeagues(fetchedLeagues);
+  //       setFilteredLeagues(fetchedLeagues);
+  //     } catch (err) {
+  //       console.error('Error fetching leagues:', err);
+  //       setError('Failed to load leagues. Please try again.');
+  //       // Fallback to empty array on error
+  //       setLeagues([]);
+  //       setFilteredLeagues([]);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchLeagues();
+  // }, []);
 
   // Filter leagues based on search query and selected level
   useEffect(() => {
@@ -227,7 +259,9 @@ export default function DiscoverLeagues() {
     );
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} 
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>}
+    >
       {passModal}
       <View style={styles.header}>
         <Text style={styles.title}>Discover Leagues</Text>
@@ -269,7 +303,7 @@ export default function DiscoverLeagues() {
         </View>
       ) : (
         filteredLeagues.map(league => (
-          <View key={league.id} style={styles.leagueCard}>
+          <View key={league.league_id} style={styles.leagueCard}>
             <Text style={styles.leagueName}>{league.league_name}</Text>
             {league.description && <Text style={styles.leagueDescription}>{league.description}</Text>}
             {league.location_str && <Text style={styles.leagueInfo}>📍{league.location_str}</Text>}

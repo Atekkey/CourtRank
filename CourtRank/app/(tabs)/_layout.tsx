@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
   return (
@@ -10,7 +11,7 @@ export default function TabLayout() {
           tabBarActiveTintColor: 'orange',
           tabBarInactiveTintColor: 'gray',
           tabBarStyle: {
-            height: 60, // Increase height
+            height: Platform.OS == "web" ? 60 : 70, // Increase height
             paddingBottom: 0, // Add padding at bottom
             paddingTop: 0, // Add padding at top
           },
