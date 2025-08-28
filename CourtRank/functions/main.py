@@ -3,20 +3,34 @@
 # $ firebase init
 # TODO: $ firebase deploy
 
-from firebase_functions import https_fn
+# Start emulator $ firebase emulators:start --only functions,firestore
+
+from firebase_functions import https_fn, firestore_fn
 from firebase_functions.options import set_global_options
 from firebase_admin import initialize_app
+from cloudevents.http import CloudEvent
 
-# For cost control, you can set the maximum number of containers that can be
-# running at the same time. This helps mitigate the impact of unexpected
-# traffic spikes by instead downgrading performance. This limit is a per-function
-# limit. You can override the limit for each function using the max_instances
-# parameter in the decorator, e.g. @https_fn.on_request(max_instances=5).
 set_global_options(max_instances=10)
 
-# initialize_app()
-#
-#
-# @https_fn.on_request()
-# def on_request_example(req: https_fn.Request) -> https_fn.Response:
-#     return https_fn.Response("Hello world!")
+initialize_app()
+
+@firestore_fn.on_document_created(document="matches/{matchId}")
+def on_match_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot | None]) -> None:
+    # On New match
+
+    if not event.data:
+        return
+    match_data, doc_id = event.data.to_dict(), event.data.id
+    if match_data["processed"] == True:
+        return
+    
+    league_k_factor = 40
+    try:
+        league_k_factor = match_data["league_k_factor"]
+    except KeyError:
+        pass
+    leagueID = match_data["league_id"]
+
+    winTeamMap = match_data["win_team"] # This holds PIDS -> {elo:#, ...}
+    loseTeamMap = match_data["loss_team"] # This holds PIDS -> {elo:#, ...}
+    
