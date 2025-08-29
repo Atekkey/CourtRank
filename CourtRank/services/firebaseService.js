@@ -253,7 +253,8 @@ export const joinLeague = async (league_id, user_id) => {
           ties: 0,
           first_name: playerData.first_name || '',
           last_name: playerData.last_name || '',
-          score: 0
+          score: 0,
+          opp_elo_sum: 0
         }
       }
     }, { merge: true });

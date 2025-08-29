@@ -125,11 +125,13 @@ export default function MyLeagues() {
   };
 
   const getEloColor = (elo) => {
-    if (elo >= 1400) return '#32f04eff';
-    if (elo >= 1200) return '#af7febff';
-    if (elo >= 1000) return '#45f6e7ff';
-    if (elo >= 900) return '#3b99e6ff'; 
-    if (elo >= 700) return '#8f9b6cff'; 
+    if (elo >= 1200) return '#324bf0ff';
+    if (elo >= 1100) return '#32b4f0ff';
+    if (elo >= 1000) return '#6ed694ff';
+    if (elo >= 900) return '#9dce42ff';
+    if (elo >= 800) return '#d7e054ff'; 
+    if (elo >= 700) return '#dfb93fff'; 
+    if (elo >= 600) return '#8b783aff'; 
     return '#666';
   };
 
@@ -596,6 +598,7 @@ export default function MyLeagues() {
         Alert.alert("Error", "Failed to create match.");
       }
     }
+    handleRefresh();
     if (result) {
       if (Platform.OS === 'web') {
         window.alert("Match created successfully.");
@@ -606,6 +609,7 @@ export default function MyLeagues() {
       setLossTeam([]);
       setShowLogModal(false);
     }
+    
   };
 
   const toggleWin = (id) => {
