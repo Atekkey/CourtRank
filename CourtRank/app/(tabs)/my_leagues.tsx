@@ -690,7 +690,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={(Platform.OS == "web" && window.innerWidth >= 768) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(Platform.OS == "web" && window.innerWidth >= 1000) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -930,7 +930,7 @@ export default function MyLeagues() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          {Platform.OS == "web" && window.innerWidth >= 768 ? 
+          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
             <Text style={styles.viewButtonText}>Leaderboard</Text>
           : <Text style={styles.viewButtonText}>Leader-board</Text>
           }
@@ -941,7 +941,7 @@ export default function MyLeagues() {
           style={styles.notifButton}
           onPress={() => notifClicked(league)}
         >
-          {Platform.OS == "web" && window.innerWidth >= 768 ? 
+          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
           <Text style={styles.leaveButtonText}>Send Notification</Text>
           :
           <Text style={styles.leaveButtonText}>Notify Users</Text>
