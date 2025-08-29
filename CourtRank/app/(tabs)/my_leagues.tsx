@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
 import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
+import * as Device from 'expo-device';
+
 
 export default function MyLeagues() {
   const [myLeagues, setMyLeagues] = useState([]);
@@ -688,7 +690,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={Platform.OS == "web" ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(Platform.OS == "web" && window.innerWidth >= 768) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -846,8 +848,7 @@ export default function MyLeagues() {
 
           
           <View style={styles.spacing}></View>
-            {matchMap}
-          
+            <ScrollView>{matchMap}</ScrollView>
 
         </View>
       </Modal>
@@ -929,7 +930,7 @@ export default function MyLeagues() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          {Platform.OS == "web" ? 
+          {Platform.OS == "web" && window.innerWidth >= 768 ? 
             <Text style={styles.viewButtonText}>Leaderboard</Text>
           : <Text style={styles.viewButtonText}>Leader-board</Text>
           }
@@ -940,7 +941,7 @@ export default function MyLeagues() {
           style={styles.notifButton}
           onPress={() => notifClicked(league)}
         >
-          {Platform.OS == "web" ? 
+          {Platform.OS == "web" && window.innerWidth >= 768 ? 
           <Text style={styles.leaveButtonText}>Send Notification</Text>
           :
           <Text style={styles.leaveButtonText}>Notify Users</Text>
