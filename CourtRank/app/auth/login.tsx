@@ -41,13 +41,11 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    console.log('[RegisterScreen] handleGoogleSignUp called');
-    console.log("useGoogleAuth: ", useGoogleAuth);
     setGoogleLoading(true);
     try {
       const user = await signInWithGoogle();
       console.log('Signed in as:', user.displayName);
-      router.replace('/(tabs)');
+      // router.replace('/(tabs)');
     } catch (error) {
       console.error('Google Sign-Up error:', error);
       Alert.alert('Sign-Up Failed', 'An error occurred during Google sign-up');
@@ -57,7 +55,7 @@ export default function LoginScreen() {
   };
 
   const navigateToRegister = () => {
-    router.push('/auth/register');
+    router.replace('/auth/register');
   };
 
   return (

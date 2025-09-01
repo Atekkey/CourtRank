@@ -38,6 +38,8 @@ export default function Index() {
   const { user, userInfo, isLoading, logout } = useAuth();
   const [notifs, setNotifs] = useState([]);
 
+  
+
   const chartConfig = {
   backgroundGradientFrom: '#ffffff',
   backgroundGradientTo: '#ffffff',
@@ -71,8 +73,8 @@ export default function Index() {
       <View style={styles.profileContainer}>
         <View style={styles.circularBanner}>
           <View style={styles.profileImageContainer}>
-              {userInfo?.profileImage ? (
-                <Image source={{ uri: userInfo.profileImage }} style={styles.profileImage} />
+              {userInfo?.photo_URL ? (
+                <Image source={{ uri: userInfo.photo_URL}} style={styles.profileImage} />
               ) : (
                 <View style={styles.profileImagePlaceholder}>
                   <Text style={styles.profileImageText}>
@@ -214,6 +216,7 @@ const styles = StyleSheet.create({
   profileImage: {
     width: '100%',
     height: '100%',
+    // backgroundColor: 'green',
   },
   profileImagePlaceholder: {
     width: '100%',
