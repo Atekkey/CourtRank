@@ -7,7 +7,7 @@ import {
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   onAuthStateChanged,
-
+  GoogleAuthProvider, signInWithCredential,
   signOut as firebaseSignOut,
   User as FirebaseUser,
   getRedirectResult
@@ -34,6 +34,7 @@ const redirectUri = makeRedirectUri({
 });
 
 export function useGoogleAuth() {
+  
   console.log('[useGoogleAuth] Hook initialized');
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: WEB_CLIENT_ID,
@@ -53,24 +54,46 @@ export function useGoogleAuth() {
     }
 
     const { id_token } = result.params;
-    const credential = GoogleAuthProvider.credential(id_token);
-    const userCredential = await signInWithCredential(auth, credential);
-    const user = userCredential.user;
 
-    await createPlayerDoc(user);
+    let user = null;
+    
+    try {
+      const credential = GoogleAuthProvider.credential(id_token);
+      const userCredential = await signInWithCredential(auth, credential);
+      user = userCredential.user;
 
+      try {
+        await createPlayerDoc(user);
+      } catch (error) {
+        console.log('Error creating player document:', error);
+        // If player doc creation fails, delete the authenticated user to avoid orphaned auth accounts
+        if (user) {
+          auth
+            .deleteUser(user.uid)
+            .then(() => {
+              console.log('Successfully deleted user');
+            })
+            .catch((error) => {
+              console.log('Error deleting user:', error);
+            });
+        }
+      }
+  } catch (error) {
+      console.log('Error during Firebase sign-in with Google credential:', error);
+      throw error;
+  }
     return user;
+    
   }
 
   return { request, response, signInWithGoogle };
 }
 
 async function createPlayerDoc(user) {
-  console.log("[firebaseService.js]: Creating player doc for user ", user);
+  // console.log("[firebaseService.js]: Creating player doc for user ", user);
   const playerRef = doc(db, "players", user.uid);
-  console.log("player ref ", playerRef);
   const docSnap = await getDoc(playerRef);
-  console.log("doc " , doc);
+  
 
   if (!docSnap.exists()) {
     const displayName = user.displayName || '';
@@ -85,6 +108,8 @@ async function createPlayerDoc(user) {
       league_info: [],
       photo_URL: user.photoURL || '',
     });
+
+ 
 
     console.log('New player document created for:', user.email);
   } else {
@@ -101,27 +126,36 @@ export const registerPlayer = async (email, password, userData) => {
 
     // Add player profile to Firestore
     // uses player.uid as the document ID
-    await setDoc(doc(db, 'players', user.uid), {
-      created_at: new Date(),
-      email: user.email,
-      first_name: userData.first_name,
-      last_name: userData.last_name,
-      league_info: [],
-      photo_URL: "",
-      // Note, player_id not stored bc it is docID
-    });
+    try {
+      await setDoc(doc(db, 'players', user.uid), {
+        created_at: new Date(),
+        email: user.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        league_info: [],
+        photo_URL: "",
+        // Note, player_id not stored bc it is docID
+      });
+    } catch (error) {
+      console.log('Error creating player document:', error);
+        // Remove user from firestore database upon doc creation error
+        if (user) {
+          auth
+            .deleteUser(user.uid)
+            .then(() => {
+              console.log('Successfully deleted user');
+            })
+            .catch((error) => {
+              console.log('Error deleting user:', error);
+            });
+        }
+    }
+
 
     return user;
   } catch (error) {
-      // Remove user from firestore database upon doc creation error
-      if (user) {
-        try {
-          await user.delete();
-          console.warn('Auth user deleted due to Firestore failure');
-        } catch (deleteError) {
-          console.error('Failed to delete user after Firestore failure:', deleteError);
-        }
-      }
+
+    console.log('Error during registration:', error);
     throw error;
   }
 };
