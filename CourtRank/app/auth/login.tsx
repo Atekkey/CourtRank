@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { loginUser, useGoogleAuth } from '../../services/firebaseService';
@@ -65,7 +65,9 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>CourtRank</Text>
+                
+          <Image source={require('../../assets/images/CourtRankPodiumLogo.png')} style={styles.logoImage}></Image>
+                
           <Text style={styles.subtitle}>Welcome Back!</Text>
         </View>
 
@@ -77,10 +79,10 @@ export default function LoginScreen() {
             disabled={googleLoading || loading}
           >
             {googleLoading ? (
-              <ActivityIndicator size="small" color="#4285F4" />
+              <ActivityIndicator size="small" color="#8E24AA"  />
             ) : (
               <>
-                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+                <Ionicons name="logo-google" size={20} color="#8E24AA"  style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
               </>
             )}
@@ -168,10 +170,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+    logoImage: {
+    
+    height: 80,
+    resizeMode: 'contain',
+
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: "#8E24AA" ,
     marginBottom: 10,
   },
   subtitle: {
@@ -185,7 +198,7 @@ const styles = StyleSheet.create({
     padding: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -233,12 +246,12 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   loginButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: "#8E24AA" ,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#2f95dc',
+    shadowColor: "#8E24AA" ,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -276,10 +289,10 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#2f95dc',
+    borderColor: "#8E24AA" ,
   },
   registerButtonText: {
-    color: '#2f95dc',
+    color: "#8E24AA" ,
     fontSize: 18,
     fontWeight: 'bold',
   },

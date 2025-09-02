@@ -6,6 +6,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { osName } from 'expo-device';
 
 function RootLayoutNav() {
   const { user, isLoading } = useAuth();
@@ -13,6 +14,8 @@ function RootLayoutNav() {
   const router = useRouter();
   const [hasPlayer, setHasPlayer] = useState(false);
   const [checkingPlayer, setCheckingPlayer] = useState(false);
+
+  
 
 
   useEffect(() => {
@@ -60,8 +63,8 @@ function RootLayoutNav() {
   return (
     <Stack>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/login" options={{ title: 'Login' }} />
-      <Stack.Screen name="auth/register" options={{ title: 'Register' }} />
+      <Stack.Screen name="auth/login" options={{ title: 'Login', headerShown: false }} />
+      <Stack.Screen name="auth/register" options={{ title: 'Register', headerShown: false }} />
     </Stack>
   );
 }

@@ -9,11 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  ActivityIndicator, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { registerPlayer, useGoogleAuth } from '@/services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
+import { osName } from 'expo-device';
 
 
 
@@ -131,8 +132,11 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>Join CourtRank</Text>
-          <Text style={styles.subtitle}>Create your account to start ranking!</Text>
+          <View style={{flexDirection: 'row', alignItems: 'flex-end'}}>
+          <Text style={styles.title}>Join</Text>
+            <Image source={require('../../assets/images/CourtRankPodiumLogo.png')} style={styles.logoImage}></Image>
+          </View>
+          <Text style={styles.subtitle}>Create your account to start competing!</Text>
         </View>
 
         <View style={styles.formContainer}>
@@ -143,10 +147,10 @@ export default function RegisterScreen() {
             disabled={isFormDisabled}
           >
             {googleLoading ? (
-              <ActivityIndicator size="small" color="#4285F4" />
+              <ActivityIndicator size="small" color="#8E24AA" />
             ) : (
               <>
-                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+                <Ionicons name="logo-google" size={20} color="#8E24AA" style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Sign up with Google</Text>
               </>
             )}
@@ -265,19 +269,31 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    
+
+    paddingTop: osName === 'iOS' ? 40 : 20,
+  },
+  logoImage: {
+    
+    height: 80,
+    width: 160,
+    resizeMode: 'contain',
+
+    
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2f95dc',
-    marginBottom: 10,
+    color: '#8E24AA',
+    marginBottom: 6,
+    marginRight: -6,
   },
   subtitle: {
     fontSize: 18,
     color: '#666',
     fontWeight: '500',
     textAlign: 'center',
+    marginBottom: 16,
   },
   formContainer: {
     backgroundColor: 'white',
@@ -285,7 +301,7 @@ const styles = StyleSheet.create({
     padding: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
   },
@@ -340,12 +356,12 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   registerButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#2f95dc',
+    shadowColor: '#8E24AA',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -389,7 +405,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 16,
-    color: '#2f95dc',
+    color: '#8E24AA',
     fontWeight: '600',
   },
   disabledLink: {
