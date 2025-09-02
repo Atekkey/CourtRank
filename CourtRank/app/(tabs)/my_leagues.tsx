@@ -187,10 +187,17 @@ export default function MyLeagues() {
   };
 
   const getSortedLeaderboard = () => {
-    if (!curLeague) return [];
-    const out = Object.entries(curLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
-    return out;
-  };
+  if (!curLeague) return [];
+  const out = Object.entries(curLeague.elo_info).sort((a, b) => {
+    if (b[1].elo !== a[1].elo) {
+      return b[1].elo - a[1].elo;
+    }
+    
+    return a[1].last_name.localeCompare(b[1].last_name);
+  });
+  return out;
+};
+
 
   const leaderboardMap = (curLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
     const name = pInfo.first_name + " " + pInfo.last_name;
@@ -226,15 +233,15 @@ export default function MyLeagues() {
           </View>
 
           
-          {/* <ScrollView style={styles.modalContent}> */}
-            <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
-              <Text style={[styles.rank]}> Rank</Text>
-              <Text style={[styles.name]}>Name</Text>
-              {true && <Text style={[styles.name]}>W / L</Text>}
-              <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo    </Text>
-            </View>
+          <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
+            <Text style={[styles.rank]}> Rank</Text>
+            <Text style={[styles.name]}>Name</Text>
+            {true && <Text style={[styles.name]}>W / L</Text>}
+            <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo       </Text>
+          </View>
+          <ScrollView>
             {leaderboardMap}
-          {/* </ScrollView> */}
+          </ScrollView>
 
         </View>
       </Modal>
@@ -690,7 +697,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={(Platform.OS == "web" && window.innerWidth >= 1000) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(Platform.OS == "web" && window.innerWidth >= 800) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -930,7 +937,7 @@ export default function MyLeagues() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
             <Text style={styles.viewButtonText}>Leaderboard</Text>
           : <Text style={styles.viewButtonText}>Leader-board</Text>
           }
@@ -941,7 +948,7 @@ export default function MyLeagues() {
           style={styles.notifButton}
           onPress={() => notifClicked(league)}
         >
-          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
           <Text style={styles.leaveButtonText}>Send Notification</Text>
           :
           <Text style={styles.leaveButtonText}>Notify Users</Text>
