@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    // backgroundColor: 'white',
+    
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -583,9 +583,9 @@ const styles = StyleSheet.create({
     color: '#8E24AA',
     marginBottom: 10,
 
-    // width: '40%',
+    
     maxWidth: '95%',
-    // 'solid red 1px',
+    
   },
   leagueInfo: {
     fontSize: 16,
@@ -593,8 +593,7 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   leagueMainInfo: {
-    // paddingHorizontal: 20,
-    // 'solid blue 1px',
+   
 
     width: '50%',
   },
@@ -602,26 +601,16 @@ const styles = StyleSheet.create({
     display: 'flex',
     flexDirection: 'row',
 
-    // 'solid green 1px',
-    // alignItems: 'flex-start',
-
-    // justifyContent: 'space-evenly',
+ 
   },
   leagueStats: {
-    // marginRight: 20,
     width: '50%',
-    // 'solid orange 1px',
   },
   leagueDescription: {
     fontSize: 14,
     color: '#888',
-    // marginTop: -6,
     fontStyle: 'italic',
-    // marginLeft: 3,
-
     maxWidth: '95%',
-
-    // 'solid purple 1px',
   },
   joinButton: {
     backgroundColor: '#4CAF50',
