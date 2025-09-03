@@ -269,8 +269,6 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    
-
     paddingTop: osName === 'iOS' ? 40 : 20,
   },
   logoImage: {

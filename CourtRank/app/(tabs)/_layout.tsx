@@ -11,10 +11,15 @@ export default function TabLayout() {
   return (
     <AuthProvider>
       <Tabs 
+      
         screenOptions={{
           tabBarShowLabel: false,
           tabBarActiveTintColor: 'white',
           tabBarInactiveTintColor: 'white',
+          
+          
+          
+          
           
           tabBarStyle: {
             height: 60,
@@ -47,6 +52,8 @@ export default function TabLayout() {
           
 
         }}
+
+          
       >
         <Tabs.Screen
           name="index"

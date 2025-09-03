@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl } from 'react-native';
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
+import { osName } from 'expo-device';
 
 export default function DiscoverLeagues() {
   const [leagues, setLeagues] = useState([]);
@@ -276,6 +277,8 @@ export default function DiscoverLeagues() {
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholderTextColor="#999"
+          
+          
         />
       </View>
 
@@ -304,24 +307,35 @@ export default function DiscoverLeagues() {
       ) : (
         filteredLeagues.map(league => (
           <View key={league.league_id} style={styles.leagueCard}>
-            <Text style={styles.leagueName}>{league.league_name}</Text>
-            {league.description && <Text style={styles.leagueDescription}>{league.description}</Text>}
-            {league.location_str && <Text style={styles.leagueInfo}>📍{league.location_str}</Text>}
-            <Text style={styles.leagueInfo}>
-              📅 {league.created_at.toDate().toLocaleDateString()} ➡️ 
-              {league.league_end ? league.league_end.toDate().toLocaleDateString() : '♾️'}
-            </Text>
             
-            <Text style={styles.leagueInfo}>
-              👥 Members: {league.players.length}
-            </Text>
+
+            <View style={styles.leagueInfoContainer}>
+              <View style={styles.leagueMainInfo}>
+                <Text style={styles.leagueName}>{league.league_name}</Text>
+                {league.description && <Text style={styles.leagueDescription}>{league.description}</Text>}
+              </View>
+              <View style={styles.leagueStats}>
+                  <Text style={styles.leagueInfo}>
+                    👥 <b>{league.players.length}</b> Competitors
+                  </Text>
+                
+                {league.location && <Text style={styles.leagueInfo}>📍{league.location}</Text>}
+                <Text style={styles.leagueInfo}>
+                  📅 Start: {league.created_at.toDate().toLocaleDateString()}
+                  {/* {league.league_end ? league.league_end.toDate().toLocaleDateString() : '♾️'} */}
+                </Text>
+                <Text style={styles.leagueInfo}>🚩 End: {league.league_end ? league.league_end.toDate().toLocaleDateString() : 'Never'}</Text>
+                
+
+              </View>
+            </View>
             
             <TouchableOpacity
               style={[
                 styles.joinButton,
                 league.players.some(player => player === user?.uid) && styles.joinButtonDisabled,
                 (!league.is_public && !league.players.some(player => player === user?.uid)) &&
-                 {backgroundColor: "rgba(117, 117, 236, 1)"}
+                 {backgroundColor: 'orange'}
               ]}
               onPress={() => joinLeagueClicked(league)}
               disabled={league.players.some(player => player === user?.uid)}
@@ -331,7 +345,7 @@ export default function DiscoverLeagues() {
                   if (user?.uid && league.players.some(player => player === user?.uid)) {
                     return 'Already Joined';
                   } else if(!(league.is_public)) {
-                    return 'Enter Password';
+                    return '🔒 Enter Password';
                   } else {
                     return 'Join League';
                   }
@@ -386,7 +400,8 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
+    
   },
   modalTitle: {
     fontSize: 20,
@@ -450,7 +465,7 @@ const styles = StyleSheet.create({
   },
   // NEW: Retry button styles
   retryButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -461,23 +476,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   header: {
-    backgroundColor: '#2f95dc',
     padding: 20,
     alignItems: 'center',
+
+    paddingTop: osName === 'iOS' ? 40 : 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#8E24AA',
   },
   subtitle: {
     fontSize: 16,
-    color: 'white',
+    color: '#666',
     marginTop: 5,
   },
   searchContainer: {
-    padding: 15,
-    backgroundColor: 'white',
+    paddingHorizontal: 15,
   },
   searchInput: {
     backgroundColor: '#f8f8f8',
@@ -488,6 +503,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
+  
   searchSection: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -505,11 +521,11 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   filterButtonActive: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
+    borderColor: '#8E24AA',
   },
   filterText: {
-    color: '#2f95dc',
+    color: '#8E24AA',
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',
@@ -523,7 +539,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    // backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
@@ -533,7 +549,7 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#2f95dc',
+    color: '#8E24AA',
     fontWeight: '500',
   },
   noResultsContainer: {
@@ -564,20 +580,48 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
     marginBottom: 10,
+
+    // width: '40%',
+    maxWidth: '95%',
+    // 'solid red 1px',
   },
   leagueInfo: {
     fontSize: 16,
     color: '#666',
     marginVertical: 2,
   },
+  leagueMainInfo: {
+    // paddingHorizontal: 20,
+    // 'solid blue 1px',
+
+    width: '50%',
+  },
+  leagueInfoContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+
+    // 'solid green 1px',
+    // alignItems: 'flex-start',
+
+    // justifyContent: 'space-evenly',
+  },
+  leagueStats: {
+    // marginRight: 20,
+    width: '50%',
+    // 'solid orange 1px',
+  },
   leagueDescription: {
     fontSize: 14,
     color: '#888',
-    marginTop: -6,
+    // marginTop: -6,
     fontStyle: 'italic',
-    marginLeft: 3,
+    // marginLeft: 3,
+
+    maxWidth: '95%',
+
+    // 'solid purple 1px',
   },
   joinButton: {
     backgroundColor: '#4CAF50',
