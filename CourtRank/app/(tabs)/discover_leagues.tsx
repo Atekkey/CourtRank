@@ -312,22 +312,21 @@ export default function DiscoverLeagues() {
             <View style={styles.leagueInfoContainer}>
               <View style={styles.leagueMainInfo}>
                 <Text style={styles.leagueName}>{league.league_name}</Text>
-                {league.description && <Text style={styles.leagueDescription}>{league.description}</Text>}
+                {league.description ? (<Text style={styles.leagueDescription}>{league.description}</Text>) : null}
               </View>
-              <View style={styles.leagueStats}>
+                <View style={styles.leagueStats}>
                   <Text style={styles.leagueInfo}>
-                    👥 <b>{league.players.length}</b> Competitors
+                    👥 {league.players.length} Competitors
                   </Text>
                 
                 {league.location && <Text style={styles.leagueInfo}>📍{league.location}</Text>}
                 <Text style={styles.leagueInfo}>
-                  📅 Start: {league.created_at.toDate().toLocaleDateString()}
-                  {/* {league.league_end ? league.league_end.toDate().toLocaleDateString() : '♾️'} */}
+                  📅 Started: {league.created_at.toDate().toLocaleDateString()}
                 </Text>
-                <Text style={styles.leagueInfo}>🚩 End: {league.league_end ? league.league_end.toDate().toLocaleDateString() : 'Never'}</Text>
+                {/* <Text style={styles.leagueInfo}>🚩 End: {league.league_end ? league.league_end.toDate().toLocaleDateString() : 'Never'}</Text> */}
                 
 
-              </View>
+              </View> 
             </View>
             
             <TouchableOpacity

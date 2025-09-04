@@ -3,6 +3,7 @@ import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, Touchable
 import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
+import osName from 'expo-device';
 
 
 export default function MyLeagues() {
@@ -154,7 +155,7 @@ export default function MyLeagues() {
   const resultsCount = (
     <View style={styles.resultsContainer}>
       <TouchableOpacity onPress={handleRefresh} >
-        <Text style={[styles.refreshButtonText]}>🔄</Text>
+        <Text style={[styles.refreshButtonText]}>↺ </Text>
       </TouchableOpacity>
 
       {!loading ? 
@@ -1136,24 +1137,28 @@ const styles = StyleSheet.create({
   },
   refreshButtonText:{
     fontSize: 32,
+    
   },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#2f95dc',
+    // backgroundColor: '#8E24AA',
     padding: 20,
     alignItems: 'center',
+    paddingTop: osName === 'iOS' ? 40 : 20,
+
+     
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#8E24AA',
   },
   subtitle: {
     fontSize: 16,
-    color: 'white',
+    color: '#666',
     marginTop: 5,
   },
   createLeagueButton: {
@@ -1179,9 +1184,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    // backgroundColor: '#8E24AA',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    //  borderTopWidth: 1,
+    // borderTopColor: '#e0e0e0',
+
+    
   },
   resultsText: {
     fontSize: 16,
@@ -1189,7 +1198,7 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#2f95dc',
+    color: '#8E24AA',
     fontWeight: '500',
   },
   noResultsContainer: {
@@ -1238,7 +1247,7 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
     flex: 1,
   },
   rankBadge: {
@@ -1301,7 +1310,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
     marginTop: 4,
   },
   recordContainer: {
@@ -1329,7 +1338,7 @@ const styles = StyleSheet.create({
   recordNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
   },
   recordNumberWin: {
     fontSize: 24,
@@ -1375,7 +1384,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   viewButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
     padding: 12,
     borderRadius: 8,
     flex: 1,
@@ -1424,7 +1433,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
   },
   modalTitleNotWeb: {
     fontSize: 15,
@@ -1482,8 +1491,8 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   sportOptionSelected: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
+    borderColor: '#8E24AA',
   },
   sportOptionText: {
     fontSize: 14,
@@ -1508,7 +1517,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   privacyOptionSelected: {
-    borderColor: '#2f95dc',
+    borderColor: '#8E24AA',
     backgroundColor: '#e3f2fd',
   },
   privacyOptionText: {
@@ -1518,7 +1527,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   privacyOptionTextSelected: {
-    color: '#2f95dc',
+    color: '#8E24AA',
   },
   privacyOptionSubtext: {
     fontSize: 12,
