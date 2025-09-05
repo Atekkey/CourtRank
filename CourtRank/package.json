@@ -38,6 +38,7 @@
     "firebase": "^11.10.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-icons": "^5.5.0",
     "react-native": "0.79.4",
     "react-native-async-storage": "^0.0.1",
     "react-native-chart-kit": "^6.12.0",
