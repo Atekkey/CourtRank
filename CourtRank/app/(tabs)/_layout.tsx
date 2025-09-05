@@ -3,6 +3,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 
+import { FiHome, FiSearch, FiAward, FiUser } from "react-icons/fi";
+
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
@@ -25,7 +27,8 @@ export default function TabLayout() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home" size={size} color={color} />
+               <FiHome name="home" size={size} color={color} />
+               //<Ionicons name="home" size={size} color={color} />
             ),
           }}
         />
@@ -34,7 +37,8 @@ export default function TabLayout() {
           options={{
             title: 'Discover',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="search" size={size} color={color} />
+              <FiSearch name="search" size={size} color={color} />
+              //<Ionicons name="search" size={size} color={color} />
             ),
           }}
         />
@@ -43,7 +47,8 @@ export default function TabLayout() {
           options={{
             title: 'My Leagues',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="trophy" size={size} color={color} />
+              <FiAward name="trophy" size={size} color={color} />
+              //<Ionicons name="trophy" size={size} color={color} />
             ),
           }}
         />
@@ -52,7 +57,8 @@ export default function TabLayout() {
           options={{
             title: 'Profile',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person" size={size} color={color} />
+              <FiUser name="person" size={size} color={color} />
+              //<Ionicons name="person" size={size} color={color} />
             ),
           }}
         />

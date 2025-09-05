@@ -15,6 +15,9 @@ import { router } from 'expo-router';
 import { registerPlayer, useGoogleAuth } from '@/services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
 
+import { FcGoogle } from "react-icons/fc";
+
+
 
 
 export default function RegisterScreen() {
@@ -146,7 +149,8 @@ export default function RegisterScreen() {
               <ActivityIndicator size="small" color="#4285F4" />
             ) : (
               <>
-                <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
+                {/* <Ionicons name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} /> */}
+                <FcGoogle name="logo-google" size={20} color="#4285F4" style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Sign up with Google</Text>
               </>
             )}
