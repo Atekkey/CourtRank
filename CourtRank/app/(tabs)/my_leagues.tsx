@@ -129,19 +129,21 @@ export default function MyLeagues() {
   };
 
   const getEloColor = (elo) => {
-    if (elo >= 1200) return '#324bf0ff';
-    if (elo >= 1100) return '#32b4f0ff';
-    if (elo >= 1000) return '#6ed694ff';
-    if (elo >= 900) return '#9dce42ff';
+    if (elo >= 1050) return '#9732f0ff';
+    if (elo >= 1000) return '#324bf0ff';
+    if (elo >= 950) return '#32b4f0ff';
+    if (elo >= 900) return '#6ed694ff';
+    if (elo >= 850) return '#9dce42ff';
     if (elo >= 800) return '#d7e054ff'; 
-    if (elo >= 700) return '#dfb93fff'; 
-    if (elo >= 600) return '#8b783aff'; 
+    if (elo >= 750) return '#dfb93fff'; 
+    if (elo >= 700) return '#8b783aff'; 
     return '#666';
   };
 
   const getScoreColor = (score) => {
-    if (score >= 5000) return '#8150b2ff';
-    if (score >= 3600) return '#324bf0ff';
+    if (score >= 4000) return '#e84a4aff';
+    if (score >= 3800) return '#a550b2ff';
+    if (score >= 3400) return '#5e32f0ff';
     if (score >= 3000) return '#32b4f0ff';
     if (score >= 2400) return '#6ed694ff';
     if (score >= 1800) return '#9dce42ff';
@@ -259,6 +261,7 @@ export default function MyLeagues() {
     const [wins, losses] = [pInfo.wins, pInfo.losses];
     const elo = pInfo.elo;
     const score = pInfo.score || 0;
+    const bigScore = score >= 2400;
     return (
       <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
@@ -267,7 +270,7 @@ export default function MyLeagues() {
         {eloNotScore ? 
         <Text style={[Platform.OS == "web" ? styles.elo : styles.name, { color: getEloColor(elo || 0) }]}>{elo}  </Text>
         :
-        <Text style={[Platform.OS == "web" ? styles.elo : styles.name, { color: getScoreColor(score || 0) }]}>{score}  </Text>
+        <Text style={[Platform.OS == "web" ? (bigScore ? styles.score : styles.elo) : styles.name, { color: getScoreColor(score || 0) }]}>{score}  </Text>
         }
       </View>
     );
@@ -1204,6 +1207,11 @@ const styles = StyleSheet.create({
     width: 60,
     textAlign: 'right',
     fontWeight: '600',
+  },
+  score: {
+    width: 60,
+    textAlign: 'right',
+    fontWeight: '500',
   },
   refreshButtonText:{
     fontSize: 32,
