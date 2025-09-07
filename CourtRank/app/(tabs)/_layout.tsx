@@ -3,6 +3,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { Platform, Text, View } from 'react-native';
 import * as Device from 'expo-device';
 
+import { FiHome, FiSearch, FiAward, FiUser } from "react-icons/fi";
+
 import { Ionicons } from '@expo/vector-icons';
 import { Label } from '@react-navigation/elements';
 
@@ -61,7 +63,7 @@ export default function TabLayout() {
             title: 'Home',
             headerShown: false,
             tabBarIcon: ({ color, size, focused }) => (<>
-              <Ionicons name="home" size={size} color={color}  
+              <FiHome name="home" size={size} color={color}  
               style={{
                 borderBottomColor: focused ? 'orange' : 'transparent',
                 borderBottomWidth: 2,
@@ -73,6 +75,7 @@ export default function TabLayout() {
               
              
               </>
+           
             ),
             
           }}
@@ -83,11 +86,15 @@ export default function TabLayout() {
             title: 'Discover',
             headerShown: false,
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name="search" size={size} color={color} 
+              <FiSearch name="search" size={size} color={color} 
               style={{
                 borderBottomColor: focused ? 'orange' : 'transparent',
                 borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
               }}/>
+            
             ),
           }}
         />
@@ -97,11 +104,15 @@ export default function TabLayout() {
             title: 'My Leagues',
             headerShown: false,
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name="trophy" size={size} color={color} 
+              <FiAward name="trophy" size={size} color={color} 
               style={{
                 borderBottomColor: focused ? 'orange' : 'transparent',
                 borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
               }}/>
+          
             ),
           }}
         />
@@ -111,10 +122,13 @@ export default function TabLayout() {
             title: 'Profile',
             headerShown: false,
             tabBarIcon: ({ color, size, focused }) => (
-              <Ionicons name="person" size={size} color={color} 
+              <FiUser name="person" size={size} color={color} 
               style={{
                 borderBottomColor: focused ? 'orange' : 'transparent',
                 borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
               }}/>
             ),
           }}

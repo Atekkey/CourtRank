@@ -49,6 +49,8 @@ export default function MyLeagues() {
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Leaderboard
+  const [eloNotScore, setEloNotScore] = useState(true);
 
 
   useEffect(() => {
@@ -129,13 +131,27 @@ export default function MyLeagues() {
   };
 
   const getEloColor = (elo) => {
-    if (elo >= 1200) return '#324bf0ff';
-    if (elo >= 1100) return '#32b4f0ff';
-    if (elo >= 1000) return '#6ed694ff';
-    if (elo >= 900) return '#9dce42ff';
+    if (elo >= 1050) return '#9732f0ff';
+    if (elo >= 1000) return '#324bf0ff';
+    if (elo >= 950) return '#32b4f0ff';
+    if (elo >= 900) return '#6ed694ff';
+    if (elo >= 850) return '#9dce42ff';
     if (elo >= 800) return '#d7e054ff'; 
-    if (elo >= 700) return '#dfb93fff'; 
-    if (elo >= 600) return '#8b783aff'; 
+    if (elo >= 750) return '#dfb93fff'; 
+    if (elo >= 700) return '#8b783aff'; 
+    return '#666';
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 4000) return '#e84a4aff';
+    if (score >= 3800) return '#a550b2ff';
+    if (score >= 3400) return '#5e32f0ff';
+    if (score >= 3000) return '#32b4f0ff';
+    if (score >= 2400) return '#6ed694ff';
+    if (score >= 1800) return '#9dce42ff';
+    if (score >= 1200) return '#d7e054ff'; 
+    if (score >= 800) return '#dfb93fff'; 
+    if (score >= 400) return '#8b783aff'; 
     return '#666';
   };
 
@@ -184,27 +200,80 @@ export default function MyLeagues() {
 
   // LEADERBOARD FXNS
   const lbPressed = (league) => {
-    setCurLeague(league);
+    const updatedLeague = {
+      ...league,
+      elo_info: Object.fromEntries(
+        Object.entries(league.elo_info).map(([playerId, player]) => [
+          playerId,
+          {
+            ...player,
+            score: calculateScore(player),
+          },
+        ])
+      ),
+    };
+    setCurLeague(updatedLeague);
     setShowLeaderboardModal(true);
   };
 
-  const getSortedLeaderboard = () => {
+  const getSortedLeaderboardElo = () => {
     if (!curLeague) return [];
-    const out = Object.entries(curLeague.elo_info).sort((a, b) => b[1].elo - a[1].elo);
+    const out = Object.entries(curLeague.elo_info).sort((a, b) => {
+      if (b[1].elo !== a[1].elo) {
+        return b[1].elo - a[1].elo;
+      }
+      
+      return a[1].last_name.localeCompare(b[1].last_name);
+    });
     return out;
   };
+
+  const calculateScore = (playerObj) => {
+    const totalGames = playerObj.wins + playerObj.losses;
+    if (totalGames == 0) {
+      return 0;
+    }
+    const winRate = totalGames > 0 ? (playerObj.wins / totalGames) : 0;
+    const constScoreAdj = 500;
+    return Math.floor(constScoreAdj * (winRate + 0.5) * Math.log2(totalGames + 1)); // +1 to prevent log2(1)=0
+  };
+
+  const getSortedLeaderboardScore = () => {
+    if (!curLeague) return [];
+    const out = Object.entries(curLeague.elo_info).sort((a, b) => {
+      if (b[1].score !== a[1].score) {
+        return b[1].score - a[1].score;
+      }
+      
+      return a[1].last_name.localeCompare(b[1].last_name);
+    });
+    return out;
+  };
+
+  const getSortedLeaderboard = () => {
+    if (eloNotScore == true) {
+      return getSortedLeaderboardElo();
+    }
+    return getSortedLeaderboardScore();
+  }
 
   const leaderboardMap = (curLeague) ? (getSortedLeaderboard()).map(([pId, pInfo], i) => {
     const name = pInfo.first_name + " " + pInfo.last_name;
     const rank = i + 1;
     const [wins, losses] = [pInfo.wins, pInfo.losses];
     const elo = pInfo.elo;
+    const score = pInfo.score || 0;
+    const bigScore = score >= 2400;
     return (
       <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
         <Text style={[styles.name]}>{name}</Text>
         <Text style={[styles.name]}>{wins} / {losses}</Text>
+        {eloNotScore ? 
         <Text style={[Platform.OS == "web" ? styles.elo : styles.name, { color: getEloColor(elo || 0) }]}>{elo}  </Text>
+        :
+        <Text style={[Platform.OS == "web" ? (bigScore ? styles.score : styles.elo) : styles.name, { color: getScoreColor(score || 0) }]}>{score}  </Text>
+        }
       </View>
     );
   }) : null;
@@ -228,18 +297,20 @@ export default function MyLeagues() {
           </View>
 
           
-          
-            <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
-              <Text style={[styles.rank]}> Rank</Text>
-              <Text style={[styles.name]}>Name</Text>
-              {true && <Text style={[styles.name]}>W / L</Text>}
-              <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo    </Text>
-            </View>
+          <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
+            <Text style={[styles.rank]}> Rank</Text>
+            <Text style={[styles.name]}>Name</Text>
+            {true && <Text style={[styles.name]}>W / L</Text>}
+            {/* <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo     </Text> */}
 
+            <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
+              <Text style={Platform.OS == "web" ? styles.elo : styles.name}>{eloNotScore ? "Elo  " : "Score"}</Text>
+            </TouchableOpacity>
+
+          </View>
           <ScrollView>
             {leaderboardMap}
           </ScrollView>
-          
 
         </View>
       </Modal>
@@ -695,7 +766,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={(Platform.OS == "web" && window.innerWidth >= 1000) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(Platform.OS == "web" && window.innerWidth >= 800) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -969,7 +1040,7 @@ export default function MyLeagues() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
             <Text style={styles.viewButtonText}>Leaderboard</Text>
           : <Text style={styles.viewButtonText}>Leader-board</Text>
           }
@@ -980,7 +1051,7 @@ export default function MyLeagues() {
           style={styles.notifButton}
           onPress={() => notifClicked(league)}
         >
-          {Platform.OS == "web" && window.innerWidth >= 1000 ? 
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
           <Text style={styles.leaveButtonText}>Send Notification</Text>
           :
           <Text style={styles.leaveButtonText}>Notify Users</Text>
@@ -1188,8 +1259,11 @@ const styles = StyleSheet.create({
     width: 60,
     
     fontWeight: '600',
-    
-    
+  },
+  score: {
+    width: 60,
+    textAlign: 'right',
+    fontWeight: '500',
   },
   refreshButtonText:{
     fontSize: 32,
@@ -1647,6 +1721,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'orange',
     alignItems: 'center',
     marginLeft: 10,
+  },
+  eloScoreButton: {
+    // padding: 4,
+    paddingRight: 20,
+    borderRadius: 12,
+    backgroundColor: '#a7bde7ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // marginLeft: 14,
   },
   createButtonText: {
     fontSize: 16,
