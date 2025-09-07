@@ -593,8 +593,8 @@ const styles = StyleSheet.create({
   },
   leagueMainInfo: {
    
-
-    width: '50%',
+    flex: 3,
+    // width: '50%',
   },
   leagueInfoContainer: {
     display: 'flex',
@@ -603,7 +603,8 @@ const styles = StyleSheet.create({
  
   },
   leagueStats: {
-    width: '50%',
+    // width: '50%',
+    // flex: 2,
   },
   leagueDescription: {
     fontSize: 14,
