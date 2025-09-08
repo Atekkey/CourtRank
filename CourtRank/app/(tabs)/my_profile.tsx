@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Image } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo } from '../../services/firebaseService';
+import { osName } from 'expo-device';
 
 export default function MyProfile() {
   const { user, userInfo, isLoading, logout } = useAuth();
@@ -60,12 +61,12 @@ export default function MyProfile() {
   // Show loading state
   if (isLoading) {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
         <View style={[styles.profileCard, styles.centerContent]}>
-          <ActivityIndicator size="large" color="#2f95dc" />
+          <ActivityIndicator size="large" color="#8E24AA"/>
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </ScrollView>
@@ -75,7 +76,7 @@ export default function MyProfile() {
   // Show error state
   if (error) {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
@@ -87,18 +88,31 @@ export default function MyProfile() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       <View style={styles.header}>
         <Text style={styles.title}>My Profile</Text>
       </View>
       
       <View style={styles.profileCard}>
+        <View style={styles.profileImageContainer}>
+                      {userInfo?.photo_URL ? (
+                        <Image source={{ uri: userInfo.photo_URL}} style={styles.profileImage} />
+                      ) : (
+                        <View style={styles.profileImagePlaceholder}>
+                          <Text style={styles.profileImageText}>
+                            {userInfo?.first_name[0]}{userInfo?.last_name[0]}
+                          </Text>
+                        </View>
+                      )}
+              </View>
+              <View style={styles.profileCardText}>
         <Text style={styles.playerName}>
           {userInfo?.first_name || "..."} {userInfo?.last_name || "..."}
         </Text>
         {user?.email && (
           <Text style={styles.playerEmail}>{user.email}</Text>
         )}
+        </View>
       </View>
       
       <View style={styles.settingsCard}>
@@ -118,13 +132,16 @@ export default function MyProfile() {
           <Text style={styles.settingText}>Help & Support</Text>
           {showHelp && <Text style={styles.settingSubtext}>Email ajattek@gmail.com for assistance</Text>}
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.logoutCard}>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
+
+      {/* <View style={styles.logoutCard}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View> */}
 
     </ScrollView>
   );
@@ -134,16 +151,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
-    backgroundColor: '#2f95dc',
+    
     padding: 20,
     alignItems: 'center',
+   
+  
+
+    paddingTop: osName === 'iOS' ? 40 : 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    
+    color: "#8e24aa",
+    
   },
   profileCard: {
     backgroundColor: 'white',
@@ -152,9 +176,52 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
+
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+  },
+  profileCardText: {
+    alignItems: 'flex-start',
+    marginLeft: 15,
+  },
+  profileImageContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+
+    borderColor: "#8E24AA",
+    borderWidth: 5,
+    
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+
+    
+    
+    
+  },
+  profileImagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: "#8E24AA" ,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImageText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+
+    
+  
+    
   },
   centerContent: {
     alignItems: 'center',
@@ -203,7 +270,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -228,30 +295,35 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
   logoutButton: {
-    backgroundColor: '#f44336',
-    padding: 15,
+  
     borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+   
     elevation: 2,
+
+    
+    marginRight: 'auto',
+    
+
+    marginTop: 100,
+    
+
   },
   logoutButtonText: {
-    color: 'white',
+    color: '#f44336',
     fontSize: 16,
     fontWeight: 'bold',
+    
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: "#8E24AA",
     marginBottom: 15,
   },
 });

@@ -3,6 +3,8 @@ import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, Touchable
 import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
+import { osName } from 'expo-device';
+import { LinearGradient } from 'expo-linear-gradient';
 
 
 export default function MyLeagues() {
@@ -170,7 +172,7 @@ export default function MyLeagues() {
   const resultsCount = (
     <View style={styles.resultsContainer}>
       <TouchableOpacity onPress={handleRefresh} >
-        <Text style={[styles.refreshButtonText]}>🔄</Text>
+        <Text style={[styles.refreshButtonText]}>↺ </Text>
       </TouchableOpacity>
 
       {!loading ? 
@@ -301,9 +303,45 @@ export default function MyLeagues() {
             {true && <Text style={[styles.name]}>W / L</Text>}
             {/* <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo     </Text> */}
 
-            <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
+            {/* <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
               <Text style={Platform.OS == "web" ? styles.elo : styles.name}>{eloNotScore ? "Elo  " : "Score"}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
+            <View style={styles.togglePillContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.togglePillButton,
+                  eloNotScore && styles.togglePillActive,
+                ]}
+                onPress={() => setEloNotScore(true)}
+              >
+                <Text
+                  style={[
+                    styles.togglePillText,
+                    eloNotScore && styles.togglePillTextActive,
+                  ]}
+                >
+                  Elo
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.togglePillButton,
+                  !eloNotScore && styles.togglePillActive,
+                ]}
+                onPress={() => setEloNotScore(false)}
+              >
+                <Text
+                  style={[
+                    styles.togglePillText,
+                    !eloNotScore && styles.togglePillTextActive,
+                  ]}
+                >
+                  Score
+                </Text>
+              </TouchableOpacity>
+            </View>
 
           </View>
           <ScrollView>
@@ -824,9 +862,9 @@ export default function MyLeagues() {
                     <Text style={styles_col.teamPlayersText}>{getPlayerNames(winTeam).join('\n')}</Text>
                   </View>
                 </View>
-              </View>
+             
 
-              <View style={styles_col.rightColumn}>
+              
                 <View style={styles_col.lossArea}>
                   <Text style={styles_col.teamLabel}>Lost</Text>
                   <View style={styles_col.teamPlayers}>
@@ -875,8 +913,8 @@ export default function MyLeagues() {
 
   const getMatchPlayers = (team) => {
     const playerNames = Object.values(team).map(
-      ({first_name, last_name}) => `${first_name} ${last_name}`
-    );
+      ({first_name, last_name}) => `${first_name} ${last_name[0]}`
+    ).sort((a,b) => b.length - a.length);
     return playerNames;
   };
   
@@ -885,20 +923,37 @@ export default function MyLeagues() {
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+
         
-        <View style={[styles_match.card, styles_match.winnerCard]}>
-          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text>
-        </View>
+        
+          <View style={[styles_match.card, styles_match.winnerCard]}>
+            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text> */}
 
-        <View style={[styles_match.card, styles_match.loserCard]}>
-          <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text>
-        </View>
+            {getMatchPlayers(matchInfo.win_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+        
 
-        <View style={[styles_match.card, styles_match.dateCard]}>
-          <Text style={styles_match.names}>{date}</Text>
-        </View>
+          <View style={[styles_match.card, styles_match.dateCard]}>
+            <Text style={styles_match.matchDate}>{date}</Text>
+            <Text style={styles_match.vsText}>vs</Text>
+          </View>
 
-      </View>
+          <View style={[styles_match.card, styles_match.loserCard]}>
+            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text> */}
+              {getMatchPlayers(matchInfo.loss_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+
+    
+
+      </View> 
     );
   })) : null;
 
@@ -909,7 +964,7 @@ export default function MyLeagues() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowMatchModal(false)}
       >
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, styles_match.matchModalContainer]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Match History</Text>
             <TouchableOpacity 
@@ -940,14 +995,31 @@ export default function MyLeagues() {
     return (
     <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
       <View style={styles.leagueHeader}>
+
+        <View style={styles.leagueHeaderLeft}>
+
         <Text style={styles.leagueName}>{league.league_name}</Text>
         {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => {}}>
-          <Text style={styles.leagueEndText}>📅</Text>
+          {/* <Text style={styles.leagueEndText}>📅</Text> */}
         </TouchableOpacity>)}
+        
+        <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
+        </View>
+
+        <View style={styles.leagueHeaderRight}>
+          <Text style={styles.leagueInfo}>
+            👥 {league.players.length} Competitors
+          </Text>
+          <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
+          
+          
+        </View>
+        
+         
       </View>
       
-      <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
-      <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
+      {/* <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text> */}
+      {/* <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text> */}
 
       {/* Stats Section */}
       <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
@@ -989,13 +1061,6 @@ export default function MyLeagues() {
         </View>
       </View>
 
-      {/* Log Game Button */}
-      {(!leagueDidExpire) && (<TouchableOpacity 
-        style={styles.logGameButton}
-        onPress={() => logPressed(league)}
-      >
-        <Text style={styles.logGameButtonText}>📊 Log Game</Text>
-      </TouchableOpacity>)}
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
@@ -1030,12 +1095,21 @@ export default function MyLeagues() {
         </TouchableOpacity>)
         }
       </View>
+
+      
+      {/* Log Game Button */}
+      {(!leagueDidExpire) && (<TouchableOpacity 
+        style={styles.logGameButton}
+        onPress={() => logPressed(league)}
+      >
+        <Text style={styles.logGameButtonText}>+</Text>
+      </TouchableOpacity>)}
     </View>
     )
   });
 
   return (
-    <ScrollView style={styles.container}
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
     refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh}/>}
     >
       {header}
@@ -1062,25 +1136,30 @@ export default function MyLeagues() {
 const styles_col = StyleSheet.create({
   modalContentContainer: {
   flex: 1,
-  flexDirection: 'row',
   },
   modalContentContainerDownwards: {
     flex: 1,
-    flexDirection: 'col',
-    },
+  },
   leftColumn: {
-    flex: 1, 
+    flexBasis: 0,
+    flexGrow: 1,
     borderRightWidth: 2,
     borderRightColor: '#ccc',
   },
   rightColumn: {
-    flex: 1,
+    minHeight: 80,
+    maxHeight: 400,
     margin: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#ccc',
     overflow: 'hidden',
     backgroundColor: 'white',
+
+    flexDirection: 'row',
+
+    
+    
   },
   teamHeaderRow: {
     flexDirection: 'row',
@@ -1108,7 +1187,6 @@ const styles_col = StyleSheet.create({
     flexDirection: 'row',
   },
   teamPlayers: {
-    flex: 1,
     padding: 8,
   },
   teamPlayersText: {
@@ -1120,13 +1198,15 @@ const styles_col = StyleSheet.create({
     flex: 1,
     backgroundColor: '#d6f5d6',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    padding: 8,
   },
   lossArea: {
     flex: 1,
     backgroundColor: '#f5d6d6',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    padding: 8,
   },
 });
 
@@ -1202,37 +1282,49 @@ const styles = StyleSheet.create({
     flex: 1, 
     paddingHorizontal: 15,
     fontWeight: '500',
+
+   
+
   },
   elo: {
     width: 60,
-    textAlign: 'right',
+    textAlign:'center',
     fontWeight: '600',
+
+    
   },
   score: {
     width: 60,
-    textAlign: 'right',
-    fontWeight: '500',
+    textAlign: 'center',
+    fontWeight: '600',
+
+    
   },
   refreshButtonText:{
     fontSize: 32,
+    
   },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
-    backgroundColor: '#2f95dc',
+    
     padding: 20,
     alignItems: 'center',
+    paddingTop: osName === 'iOS' ? 40 : 20,
+
+     
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#8E24AA',
   },
   subtitle: {
     fontSize: 16,
-    color: 'white',
+    color: '#666',
     marginTop: 5,
   },
   createLeagueButton: {
@@ -1258,9 +1350,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'white',
+    
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+   
+
+    
   },
   resultsText: {
     fontSize: 16,
@@ -1268,7 +1363,7 @@ const styles = StyleSheet.create({
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#2f95dc',
+    color: '#8E24AA',
     fontWeight: '500',
   },
   noResultsContainer: {
@@ -1289,11 +1384,12 @@ const styles = StyleSheet.create({
   leagueCard: {
     backgroundColor: 'white',
     margin: 15,
+    marginBottom: 40,
     padding: 20,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
@@ -1304,20 +1400,31 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
   leagueHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 10,
+  },
+  leagueHeaderLeft: {
+    
+    flex: 3,
+
+
+  },
+  leagueHeaderRight: {
+    
+
+    flex: 3,
   },
   leagueName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
     flex: 1,
   },
   rankBadge: {
@@ -1380,7 +1487,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
     marginTop: 4,
   },
   recordContainer: {
@@ -1408,7 +1515,7 @@ const styles = StyleSheet.create({
   recordNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: '#8E24AA',
   },
   recordNumberWin: {
     fontSize: 24,
@@ -1432,21 +1539,37 @@ const styles = StyleSheet.create({
     marginHorizontal: 10,
   },
   logGameButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'orange',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 50,
     marginVertical: 15,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 4,
+    
+    width: 80,
+    height: 80,
+
+    justifyContent: 'center',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+
+    marginBottom: -50,
+    borderWidth: 4,
+    borderColor: 'white',
+
+    
   },
   logGameButtonText: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
+
+    
+    alignItems: 'center',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -1454,7 +1577,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   viewButton: {
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
     padding: 12,
     borderRadius: 8,
     flex: 1,
@@ -1468,6 +1591,7 @@ const styles = StyleSheet.create({
   },
   leaveButton: {
     backgroundColor: '#f44336',
+    
     padding: 12,
     borderRadius: 8,
     flex: 1,
@@ -1485,6 +1609,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
+    
   },
   // Modal Styles
   modalContainer: {
@@ -1503,7 +1628,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
   },
   modalTitleNotWeb: {
     fontSize: 15,
@@ -1561,8 +1686,8 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   sportOptionSelected: {
-    backgroundColor: '#2f95dc',
-    borderColor: '#2f95dc',
+    backgroundColor: '#8E24AA',
+    borderColor: '#8E24AA',
   },
   sportOptionText: {
     fontSize: 14,
@@ -1587,7 +1712,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
   },
   privacyOptionSelected: {
-    borderColor: '#2f95dc',
+    borderColor: '#8E24AA',
     backgroundColor: '#e3f2fd',
   },
   privacyOptionText: {
@@ -1597,7 +1722,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   privacyOptionTextSelected: {
-    color: '#2f95dc',
+    color: '#8E24AA',
   },
   privacyOptionSubtext: {
     fontSize: 12,
@@ -1627,18 +1752,42 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'orange',
     alignItems: 'center',
     marginLeft: 10,
   },
   eloScoreButton: {
-    // padding: 4,
+    
     paddingRight: 20,
     borderRadius: 12,
     backgroundColor: '#a7bde7ff',
     alignItems: 'center',
     justifyContent: 'center',
-    // marginLeft: 14,
+    
+  },
+  togglePillContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    backgroundColor: '#ccc',
+    alignSelf: 'flex-start', 
+    padding: 2,
+    marginLeft: 10,
+  },
+  togglePillButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  togglePillActive: {
+    backgroundColor: '#ff9900', 
+  },
+  togglePillText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  togglePillTextActive: {
+    color: 'white',
+    fontWeight: '700',
   },
   createButtonText: {
     fontSize: 16,
@@ -1653,7 +1802,7 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   selectedRow: {
-    backgroundColor: '#d0f0d0', // light green for selected
+    backgroundColor: '#d0f0d0', 
   },
 });
 
@@ -1662,25 +1811,68 @@ const styles_match = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+
+    backgroundColor: 'white',
+    
+
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+   
+    
+    width: '95%',
+    padding: 10,
+
+    marginLeft: 'auto',
+    marginRight: 'auto',
+
+
+  },
+  
+  matchModalContainer: {
+    backgroundColor: '#f5f5f5',
   },
   card: {
     flex: 1,
     padding: 12,
     marginHorizontal: 4,
-    borderRadius: 8,
+    backgroundColor: 'white',
     alignItems: 'center',
+    justifyContent: 'center',
+    
+  },
+  vsText: {
+    fontSize: 30,
+    fontWeight: 'bold',
   },
   winnerCard: {
-    flex: 4,
-    backgroundColor: '#72cd75ff', 
+    flex: 3,
+    
+    alignItems: 'flex-start',
+
+        borderLeftWidth: 4,
+    borderLeftColor: 'green',
+    paddingLeft: 6,
+
+    borderRadius: 4,
+
   },
   loserCard: {
-    flex: 4,
-    backgroundColor: '#ed6a60ff',
+    flex: 3,
+    alignItems: 'flex-end',
+    borderRightWidth: 4,
+    borderRightColor: 'red',
+    paddingRight: 6,
+    borderRadius: 4,
+    
   },
   dateCard: {
     flex: 1,
-    backgroundColor: '#a8a8a8ff',
+
+    
   },
   teamName: {
     fontSize: 16,
@@ -1688,7 +1880,15 @@ const styles_match = StyleSheet.create({
     color: 'white',
   },
   names: {
-    fontSize: 14,
-    color: 'white',
+    fontSize: 16,
+    color: 'black',
+    fontWeight: '700',
+
   },
+  matchDate: {
+    fontSize: 14,
+    color: 'black',
+    fontWeight: '600',
+  }
+
 });

@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { LineChart } from 'react-native-chart-kit';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserNotifications } from '../../services/firebaseService';
+import Svg, { Text as SvgText } from "react-native-svg";
+import { osName } from 'expo-device';
 
 const screenWidth = Dimensions.get('window').width;
 const eloHistoryImplemented = false;
@@ -40,6 +42,9 @@ export default function Index() {
 
   
 
+  
+  
+
   const chartConfig = {
   backgroundGradientFrom: '#ffffff',
   backgroundGradientTo: '#ffffff',
@@ -64,11 +69,14 @@ export default function Index() {
 
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>CourtRank</Text>
+        {/* <Text style={styles.title}>CourtRank</Text> */}
+        <Image source={require('../../assets/images/CourtRankPodiumLogo.png')} style={styles.logoImage}></Image>
       </View>
+      
+          
 
       <View style={styles.profileContainer}>
         <View style={styles.circularBanner}>
@@ -164,16 +172,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
-    backgroundColor: '#2f95dc',
+    
     padding: 20,
     alignItems: 'center',
+    paddingTop: osName === 'iOS' ? 40 :20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    fontStyle: 'italic',
+
+      
+  },
+  logoImage: {
+    
+    height: 80,
+    resizeMode: 'contain',
+
+           shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   subtitle: {
     fontSize: 16,
@@ -181,47 +205,52 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   profileContainer: {
-    backgroundColor: 'white',
+  
     margin: 15,
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+ 
     elevation: 3,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    width: '100%',
+
   },
   circularBanner: {
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: '#2f95dc',
+    borderColor: "#8E24AA" ,
     padding: 6,
     marginBottom: 15,
     position: 'relative',
-    shadowColor: '#2f95dc',
+    shadowColor: "#8E24AA" ,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
+
+    zIndex: 1,
   },
   profileImageContainer: {
     width: '100%',
     height: '100%',
     borderRadius: 50,
     overflow: 'hidden',
+    
   },
   profileImage: {
     width: '100%',
     height: '100%',
-    // backgroundColor: 'green',
+    
   },
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#2f95dc',
+    backgroundColor: "#8E24AA" ,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -229,15 +258,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
+
+    
+  
+    
   },
   profileInfo: {
     alignItems: 'center',
+
+    width: '100%',
+    
+    borderRadius: 10,
+    
+    
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+
+    marginTop: -35,
   },
   profileName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: "black" ,
+    marginTop: 25,
     marginBottom: 15,
+
+
   },
   profileStats: {
     flexDirection: 'row',
@@ -254,7 +303,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: "#8E24AA" ,
   },
   statLabel: {
     fontSize: 12,
@@ -275,8 +324,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2f95dc',
+    color: "#8E24AA" ,
     marginBottom: 15,
+
+   
+               
   },
   chart: {
     marginVertical: 8,
@@ -289,9 +341,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
+
+    
   },
   noAnnouncementsContainer: {
     alignItems: 'center',
@@ -314,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 10,
     borderLeftWidth: 4,
-    borderLeftColor: '#2f95dc',
+    borderLeftColor: "#8E24AA" ,
   },
   newAnnouncementCard: {
     backgroundColor: '#e3f2fd',
@@ -324,12 +378,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+
+    
   },
   announcementIcon: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#2f95dc',
+    backgroundColor: "#8E24AA" ,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,

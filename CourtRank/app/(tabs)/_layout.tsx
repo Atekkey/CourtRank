@@ -1,54 +1,166 @@
 import { Tabs } from 'expo-router';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Platform } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import * as Device from 'expo-device';
+import {osName} from 'expo-device';
 
 import { FiHome, FiSearch, FiAward, FiUser } from "react-icons/fi";
 
 import { Ionicons } from '@expo/vector-icons';
+import { Label } from '@react-navigation/elements';
 
 export default function TabLayout() {
 
   return (
+    
     <AuthProvider>
-      <Tabs
+      <Tabs 
+      
         screenOptions={{
-          tabBarActiveTintColor: 'orange',
-          tabBarInactiveTintColor: 'gray',
+          tabBarShowLabel: false,
+        
+          tabBarInactiveTintColor: 'white',
+          tabBarActiveTintColor: Platform.OS ==='web' ? 'orange' : 'white',
+          
+          
+          
+          
+          
           tabBarStyle: {
-            height: Platform.OS == "web" ? 60 : 70, // Increase height
-            paddingBottom: 0, // Add padding at bottom
-            paddingTop: 0, // Add padding at top
+            height: 60,
+            backgroundColor: "#8E24AA" , 
+            width: '90%',
+            marginBottom: 20,
+            borderRadius: 100,
+
+            display: 'flex',
+            
+            flexDirection: 'row',
+            alignItems: 'center',
+
+            position: 'absolute',
+            
+            marginLeft:'5%',
+
+          shadowColor: '#000',
+          shadowOpacity: 0.6,
+          shadowOffset: { width: 0, height: 5 },
+          shadowRadius: 10,
+            
+             
+            
           },
+          tabBarIconStyle: {
+            marginTop: 2,
+          }
+          
+          
+
         }}
+
+          
       >
         <Tabs.Screen
           name="index"
           options={{
             title: 'Home',
-            tabBarIcon: ({ color, size }) => (
-               <FiHome name="home" size={size} color={color} />
-               //<Ionicons name="home" size={size} color={color} />
-            ),
+            headerShown: false,
+            
+            tabBarIcon: ({ color, size, focused }) => 
+            (Platform.OS === 'web' ?
+            
+            
+              <FiHome name="home" size={size} color={color}  
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+
+
+              
+              
+             
+              
+              
+            
+           
+            : 
+              
+              <Ionicons name="home" size={size} color={color}  
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+              
+              
+             
+              
+            
+            
+            )
+            
           }}
         />
         <Tabs.Screen
           name="discover_leagues"
           options={{
             title: 'Discover',
-            tabBarIcon: ({ color, size }) => (
-              <FiSearch name="search" size={size} color={color} />
-              //<Ionicons name="search" size={size} color={color} />
-            ),
+            headerShown: false,
+            tabBarIcon: ({ color, size, focused }) => (Platform.OS === 'web' ? 
+              
+              <FiSearch name="search" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+              : 
+              <Ionicons name="search" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+            
+            )
           }}
         />
         <Tabs.Screen
           name="my_leagues"
           options={{
             title: 'My Leagues',
-            tabBarIcon: ({ color, size }) => (
-              <FiAward name="trophy" size={size} color={color} />
-              //<Ionicons name="trophy" size={size} color={color} />
+            headerShown: false,
+            tabBarIcon: ({ color, size, focused }) => (
+              Platform.OS === 'web' ?
+              <FiAward name="trophy" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+
+              :
+              <Ionicons name="trophy" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+          
             ),
           }}
         />
@@ -56,9 +168,27 @@ export default function TabLayout() {
           name="my_profile"
           options={{
             title: 'Profile',
-            tabBarIcon: ({ color, size }) => (
-              <FiUser name="person" size={size} color={color} />
-              //<Ionicons name="person" size={size} color={color} />
+            headerShown: false,
+            tabBarIcon: ({ color, size, focused }) => (
+              Platform.OS === 'web' ?
+              <FiUser name="person" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
+
+              :
+              <Ionicons name="person" size={size} color={color} 
+              style={{
+                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomWidth: 2,
+                transitionProperty: 'border-bottom-color',
+                transitionDuration: '0.3s',
+                transitionTimingFunction: 'ease-in-out',
+              }}/>
             ),
           }}
         />
