@@ -303,9 +303,45 @@ export default function MyLeagues() {
             {true && <Text style={[styles.name]}>W / L</Text>}
             {/* <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo     </Text> */}
 
-            <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
+            {/* <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
               <Text style={Platform.OS == "web" ? styles.elo : styles.name}>{eloNotScore ? "Elo  " : "Score"}</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
+
+            <View style={styles.togglePillContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.togglePillButton,
+                  eloNotScore && styles.togglePillActive,
+                ]}
+                onPress={() => setEloNotScore(true)}
+              >
+                <Text
+                  style={[
+                    styles.togglePillText,
+                    eloNotScore && styles.togglePillTextActive,
+                  ]}
+                >
+                  Elo
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.togglePillButton,
+                  !eloNotScore && styles.togglePillActive,
+                ]}
+                onPress={() => setEloNotScore(false)}
+              >
+                <Text
+                  style={[
+                    styles.togglePillText,
+                    !eloNotScore && styles.togglePillTextActive,
+                  ]}
+                >
+                  Score
+                </Text>
+              </TouchableOpacity>
+            </View>
 
           </View>
           <ScrollView>
@@ -888,14 +924,7 @@ export default function MyLeagues() {
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
 
-        {/* // <LinearGradient  key={matchInfo.id} start={{x: 0, y: 0}} end={{x: 1, y: 0}}
-        style={styles_match.matchContainer} 
-        // locations={[0, 0.1, 0.2, 0.8, 0.9, 1]}
-        // colors={['#00ff33ff', '#00ff3390' ,'#ffffffff', '#ffffffff' , '#ff00008c', '#ff0000ff']}
-        colors={['white']}>   */}
         
-       
-
         
           <View style={[styles_match.card, styles_match.winnerCard]}>
             {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text> */}
@@ -922,7 +951,7 @@ export default function MyLeagues() {
             ))}
           </View>
 
-      {/* </LinearGradient> */}
+    
 
       </View> 
     );
@@ -1080,7 +1109,7 @@ export default function MyLeagues() {
   });
 
   return (
-    <ScrollView style={styles.container}
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
     refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh}/>}
     >
       {header}
@@ -1107,7 +1136,6 @@ export default function MyLeagues() {
 const styles_col = StyleSheet.create({
   modalContentContainer: {
   flex: 1,
-  flexDirection: 'row',
   },
   modalContentContainerDownwards: {
     flex: 1,
@@ -1115,7 +1143,6 @@ const styles_col = StyleSheet.create({
   leftColumn: {
     flexBasis: 0,
     flexGrow: 1,
-    // minHeight: 400,
     borderRightWidth: 2,
     borderRightColor: '#ccc',
   },
@@ -1130,6 +1157,8 @@ const styles_col = StyleSheet.create({
     backgroundColor: 'white',
 
     flexDirection: 'row',
+
+    
     
   },
   teamHeaderRow: {
@@ -1158,7 +1187,6 @@ const styles_col = StyleSheet.create({
     flexDirection: 'row',
   },
   teamPlayers: {
-    // flex: 1,
     padding: 8,
   },
   teamPlayersText: {
@@ -1254,16 +1282,23 @@ const styles = StyleSheet.create({
     flex: 1, 
     paddingHorizontal: 15,
     fontWeight: '500',
+
+   
+
   },
   elo: {
     width: 60,
-    
+    textAlign:'center',
     fontWeight: '600',
+
+    
   },
   score: {
     width: 60,
-    textAlign: 'right',
-    fontWeight: '500',
+    textAlign: 'center',
+    fontWeight: '600',
+
+    
   },
   refreshButtonText:{
     fontSize: 32,
@@ -1272,9 +1307,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
-    // backgroundColor: '#8E24AA',
+    
     padding: 20,
     alignItems: 'center',
     paddingTop: osName === 'iOS' ? 40 : 20,
@@ -1375,13 +1411,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   leagueHeaderLeft: {
-    // border: 'solid red 1px',
+    
     flex: 3,
 
 
   },
   leagueHeaderRight: {
-    // border: 'solid green 1px',
+    
 
     flex: 3,
   },
@@ -1531,8 +1567,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
-    // lineHeight: 60,
-    // border: "solid red 1px",
 
     
     alignItems: 'center',
@@ -1723,13 +1757,37 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   eloScoreButton: {
-    // padding: 4,
+    
     paddingRight: 20,
     borderRadius: 12,
     backgroundColor: '#a7bde7ff',
     alignItems: 'center',
     justifyContent: 'center',
-    // marginLeft: 14,
+    
+  },
+  togglePillContainer: {
+    flexDirection: 'row',
+    borderRadius: 20,
+    backgroundColor: '#ccc',
+    alignSelf: 'flex-start', 
+    padding: 2,
+    marginLeft: 10,
+  },
+  togglePillButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  togglePillActive: {
+    backgroundColor: '#ff9900', 
+  },
+  togglePillText: {
+    color: '#333',
+    fontWeight: '500',
+  },
+  togglePillTextActive: {
+    color: 'white',
+    fontWeight: '700',
   },
   createButtonText: {
     fontSize: 16,
@@ -1744,7 +1802,7 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   selectedRow: {
-    backgroundColor: '#d0f0d0', // light green for selected
+    backgroundColor: '#d0f0d0', 
   },
 });
 
@@ -1763,7 +1821,8 @@ const styles_match = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
-    // height: 100,
+   
+    
     width: '95%',
     padding: 10,
 
@@ -1775,23 +1834,19 @@ const styles_match = StyleSheet.create({
   
   matchModalContainer: {
     backgroundColor: '#f5f5f5',
-    // border: 'solid red 5px',
   },
   card: {
     flex: 1,
     padding: 12,
     marginHorizontal: 4,
     backgroundColor: 'white',
-    // borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    // backgroundColor: '#e0e0e0',
     
   },
   vsText: {
     fontSize: 30,
     fontWeight: 'bold',
-    // color: 'orange',
   },
   winnerCard: {
     flex: 3,
@@ -1804,12 +1859,6 @@ const styles_match = StyleSheet.create({
 
     borderRadius: 4,
 
-    // border: 'solid red 1px',
-
-    
-    // backgroundColor: '#72cd75ff', 
-    // borderLeftColor: '#72cd75ff',
-    // borderLeftWidth: 4,
   },
   loserCard: {
     flex: 3,
@@ -1818,13 +1867,12 @@ const styles_match = StyleSheet.create({
     borderRightColor: 'red',
     paddingRight: 6,
     borderRadius: 4,
-    // backgroundColor: '#ed6a60ff',
+    
   },
   dateCard: {
     flex: 1,
 
-    // border: 'solid red 1px',
-    // backgroundColor: '#a8a8a8ff',
+    
   },
   teamName: {
     fontSize: 16,
@@ -1835,18 +1883,7 @@ const styles_match = StyleSheet.create({
     fontSize: 16,
     color: 'black',
     fontWeight: '700',
-    // fontStyle: 'italic',
 
-    // borderBottomWidth: 0.5,
-    // borderBottomColor: '#00000033',
-
-
-
-    // borderRightWidth: 2,
-    // borderRightColor: 'black',
-        
-    // fontVariant: ['small-caps'],
-    
   },
   matchDate: {
     fontSize: 14,

@@ -69,7 +69,7 @@ export default function Index() {
 
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       {/* Header */}
       <View style={styles.header}>
         {/* <Text style={styles.title}>CourtRank</Text> */}
@@ -172,6 +172,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
     

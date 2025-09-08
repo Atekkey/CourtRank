@@ -155,7 +155,7 @@ export default function DiscoverLeagues() {
   // NEW: Error state UI
   if (error) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
+      <View style={[styles.container, styles.centerContent]} >
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity 
           style={styles.retryButton}
@@ -260,7 +260,7 @@ export default function DiscoverLeagues() {
     );
 
   return (
-    <ScrollView style={styles.container} 
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>}
     >
       {passModal}
@@ -442,6 +442,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   // NEW: Center content style for loading and error states
   centerContent: {

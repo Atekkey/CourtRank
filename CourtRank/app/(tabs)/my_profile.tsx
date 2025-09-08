@@ -61,7 +61,7 @@ export default function MyProfile() {
   // Show loading state
   if (isLoading) {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
@@ -76,7 +76,7 @@ export default function MyProfile() {
   // Show error state
   if (error) {
     return (
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
         </View>
@@ -88,7 +88,7 @@ export default function MyProfile() {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}>
       <View style={styles.header}>
         <Text style={styles.title}>My Profile</Text>
       </View>
@@ -151,6 +151,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    
   },
   header: {
     

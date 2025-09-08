@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { loginUser, useGoogleAuth } from '../../services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
 
+
 import { FcGoogle } from "react-icons/fc";
 
 
@@ -84,11 +85,21 @@ export default function LoginScreen() {
             {googleLoading ? (
               <ActivityIndicator size="small" color="#8E24AA"  />
             ) : (
+              
+                Platform.OS === 'web' ?
+            (
               <>
-                
                 <FcGoogle name="logo-google" size={20} color="#8E24AA" style={styles.googleIcon} />
                 <Text style={styles.googleButtonText}>Continue with Google</Text>
               </>
+            ) : (
+              <>
+                <Ionicons name="logo-google" size={20} color="#8E24AA" style={styles.googleIcon} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
+            ) 
+              
+              
             )}
           </TouchableOpacity>
 
