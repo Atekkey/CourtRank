@@ -58,6 +58,7 @@ export default function MyLeagues() {
     setLoading(true);
     const fetchMyLeagues = async () => {
       try {
+        console.log("[my_leagues]: user id useEffect, fetching user leagues");
         const leagues = await getUserLeagues(user?.uid);
         setMyLeagues(leagues);
       } catch (error) {
@@ -72,6 +73,7 @@ export default function MyLeagues() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
+      console.log("[my_leagues]: handleRefresh, fetching user leagues");
       const leagues = await getUserLeagues(user?.uid);
       setMyLeagues(leagues);
       fetchAllMatchHistory();
@@ -86,6 +88,7 @@ export default function MyLeagues() {
       if (Platform.OS === 'web') {
         const proceed = window.confirm(`Leave ${leagueName}?`);
         if (!proceed) return;
+        console.log("[my_leagues]: handle leave league");
         await leaveLeague(leagueId, user?.uid);
         handleRefresh();
       } else {
@@ -99,6 +102,7 @@ export default function MyLeagues() {
               style: 'destructive',
               onPress: async () => {
                 try {
+                  console.log("[my_leagues]: await leave league");
                   await leaveLeague(leagueId, user?.uid);
                   handleRefresh();
                 } catch (error) {
@@ -366,6 +370,7 @@ export default function MyLeagues() {
 
   const handleCreateNotif = async () => {
     try {
+      console.log("[my_leagues]: await create notification");
       await createNotification({
         admin_name: `${userInfo.first_name} ${userInfo.last_name}`,
         league_name: curLeague.league_name,
@@ -476,6 +481,7 @@ export default function MyLeagues() {
       return;
     }
     try {
+      console.log("[my_leagues]: await createLeague");
       await createLeague(newLeague);
       
       setShowCreateModal(false);
@@ -704,6 +710,7 @@ export default function MyLeagues() {
       processed: false,
     };
 
+    console.log("[my_leagues]: await creating match");
     const result = await createMatch(matchData);
     if (!result) {
       if (Platform.OS === 'web') {
@@ -905,6 +912,7 @@ export default function MyLeagues() {
 
   const fetchAllMatchHistory = async () => {
     try {
+      console.log("[my_leagues]: Fetching all match history, await getAllMatches");
       const matches = await getAllMatches();
       setMatchHistory(matches);
     } catch (error) {
