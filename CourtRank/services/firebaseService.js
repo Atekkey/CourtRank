@@ -2,7 +2,10 @@ import {
   collection, addDoc, getDocs, doc, updateDoc, deleteDoc,getDoc,
   query, where, orderBy, onSnapshot,setDoc,
   arrayUnion, arrayRemove, deleteField,
-  serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer
+  serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer,
+  limit,
+  endBefore,
+  startAfter
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
@@ -17,6 +20,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
+import { useState } from 'react';
 
 
 
@@ -448,4 +452,140 @@ export const getAllMatches = async () => {
   }
 }
 
+// useMatches hook
+export function useMatches() {
+  // stateHooks:
+  const [matchesWindow, setMatchesWindow] = useState([]);
 
+  // page index (to get window)
+  let page = 0;
+  const pageSize = 20;
+
+
+
+
+
+  // Map<leagueID, matches[]> allMatches
+  let allMatches = new Map();
+
+  // currLeague
+  let currLeague = null;
+
+  // funcs:
+  //  fetchMatches (Ids[]) (fetches matches given league array)
+  
+  async function startUseMatches(leagueIDs) {
+    // params: user league_ids
+    // This essesntially initializes the hook with necessary data
+    // Will populate allMatches map with a key for each leagueID
+  }
+
+  // fetch first 40 matches for a single leagueID, checking cache first
+  async function fetchLeagueMatch(leagueID) {
+    try {
+      const cacheQ = query(
+        collection(db, 'matches'),
+        where('league_id', '==', leagueID),
+        orderBy('timestamp', 'desc'),
+        orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
+      );
+      const matches = [];
+
+      // Check for cached matches first
+      console.log("Checking cache for matches...");
+      const cacheSnapshot = await getDocsFromCache(cacheQ);
+
+      // Query is empty, no cached data exists
+      if (cacheSnapshot.empty) {
+        console.log("No cached matches exist, reading 2 pages from server");
+        const serverQ = query(
+          collection(db, 'matches'),
+          where('league_id', '==', leagueID),
+          orderBy('timestamp', 'desc'),
+          orderBy('league_id', 'desc'),
+          limit(pageSize * 2)
+        );
+        const serverSnapshot = await getDocsFromServer(serverQ);
+
+        serverSnapshot.forEach((doc) => {
+          matches.push({id: doc.id, ...doc.data()});
+        });
+
+        return matches;
+
+      } 
+
+
+      // Check for existing matches newer than latest cached match
+      const updateQuery = query(
+        collection(db, 'matches'),
+        where('league_id', '==', leagueID),
+        orderBy('timestamp', 'desc'),
+        orderBy('league_id', 'desc'),
+        endBefore(cacheSnapshot.docs[0]),
+        limit(pageSize * 2) // also use limit in case of large gap between cache and server to prevent excessive reads
+      );
+
+      const updateSnapshot = await getDocsFromServer(updateQuery);
+
+      if (!updateSnapshot.empty) {
+        // updates found, add to matches
+        updateSnapshot.forEach((doc) => {
+          matches.push({id: doc.id, ...doc.data()});
+        });
+
+        if (updateSnapshot.docs.length >= pageSize * 2) {
+          // assume stale cache, just return updates
+          return matches;
+        } 
+      }
+
+
+          
+      // updates connect to cache, include cached data
+      cacheSnapshot.forEach((doc) => {
+        matches.push({id: doc.id, ...doc.data()});
+      });
+
+
+
+      // if < 2 pages of matches exist, check for older matches
+      // just an edge case if matches were cached, then some older matches were deleted from cache 
+      if (matches.length < pageSize * 2) {
+        const gapQuery = query(
+          collection(db, 'matches'),
+          where('league_id', '==', leagueID),
+          orderBy('timestamp', 'desc'),
+          orderBy('league_id', 'desc'),
+          startAfter(cacheSnapshot.docs[cacheSnapshot.docs.length - 1]),
+          limit((pageSize * 2) - matches.length)
+        );
+
+        const gapSnapshot = await getDocsFromServer(gapQuery);
+        if (!gapSnapshot.empty) {
+          // gap exists, add gap to matches to total 2 pages worth of matches
+          gapSnapshot.forEach((doc) => {
+            matches.push({id: doc.id, ...doc.data()});
+          });
+
+        }
+      }
+
+      return matches;
+            
+
+  } catch (error) {
+      throw error;
+  }
+}
+
+  
+
+  
+
+  //  setCurrLeague (leagueId)
+        // should 
+  // nextPage()
+  // prevPage()
+
+}
