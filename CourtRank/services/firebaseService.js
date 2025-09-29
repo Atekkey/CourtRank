@@ -5,7 +5,8 @@ import {
   serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer,
   limit,
   endBefore,
-  startAfter
+  startAfter,
+  Query
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
@@ -20,7 +21,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
-import { useState } from 'react';
+import { use, useRef, useState } from 'react';
 
 
 
@@ -458,30 +459,80 @@ export function useMatches() {
   const [matchesWindow, setMatchesWindow] = useState([]);
 
   // page index (to get window)
-  let page = 0;
-  const pageSize = 20;
-
-
-
-
+  const page = useRef(0);
+  const pageSize = useRef(20);
 
   // Map<leagueID, matches[]> allMatches
-  let allMatches = new Map();
+  const allMatches = useRef(new Map());
 
   // currLeague
-  let currLeague = null;
+  const currLeague = useRef(null);
+
+  // !! Maybe have boolean value telling if reached end of matches for currLeague (so no more next page)
+  const endOfMatches = useRef(false);
+  const startOfMatches = useRef(true);
 
   // funcs:
   //  fetchMatches (Ids[]) (fetches matches given league array)
   
   async function startUseMatches(leagueIDs) {
     // params: user league_ids
-    // This essesntially initializes the hook with necessary data
+    // This essesntially initializes the hook with some data
     // Will populate allMatches map with a key for each leagueID
+
+    // need to clear all vars using useRef first to eliminate stale data
+    allMatches.current = new Map();
+    page.current = 0;
+
+
+    for (const leagueID of leagueIDs) {
+      allMatches.set(leagueID, []);
+    }
+
+  }
+
+  async function setLeague(leagueID) {
+    // sets currLeague, fetches matches if not already fetched
+    try {
+      if (!allMatches.current.has(leagueID)) {
+        throw new Error('League not found in useMatches hook');
+      }
+
+      currLeague.current = leagueID;
+
+      if (allMatches.current.get(leagueID).length === 0) {
+        // no matches fetched yet, fetch now
+        allMatches.current.set(leagueID, await fetchLeagueMatches(leagueID));
+      }
+
+      const matches = allMatches.current.get(leagueID);
+
+      // set page to 0
+      page.current = 0;
+
+
+      // set matchesWindow to first page of matches
+      // uses current page and page size to calculate window 
+      if (matches.length <= 20) {
+        // if less than one page of matches, set endOfMatches to true
+        endOfMatches.current = true;
+        setMatchesWindow(matches.slice(0, matches.length));
+      } else {
+        setMatchesWindow(matches.slice(0, 20));
+      }
+      // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
+      
+
+    } catch (error) {
+      throw error;
+
+    }
+
+
   }
 
   // fetch first 40 matches for a single leagueID, checking cache first
-  async function fetchLeagueMatch(leagueID) {
+  async function fetchLeagueMatches(leagueID) {
     try {
       const cacheQ = query(
         collection(db, 'matches'),
@@ -503,7 +554,7 @@ export function useMatches() {
           where('league_id', '==', leagueID),
           orderBy('timestamp', 'desc'),
           orderBy('league_id', 'desc'),
-          limit(pageSize * 2)
+          limit(pageSize.current * 2)
         );
         const serverSnapshot = await getDocsFromServer(serverQ);
 
@@ -523,7 +574,7 @@ export function useMatches() {
         orderBy('timestamp', 'desc'),
         orderBy('league_id', 'desc'),
         endBefore(cacheSnapshot.docs[0]),
-        limit(pageSize * 2) // also use limit in case of large gap between cache and server to prevent excessive reads
+        limit(pageSize.current * 2) // also use limit in case of large gap between cache and server to prevent excessive reads
       );
 
       const updateSnapshot = await getDocsFromServer(updateQuery);
@@ -586,6 +637,66 @@ export function useMatches() {
   //  setCurrLeague (leagueId)
         // should 
   // nextPage()
+  async function nextPage() {
+    try {
+      // needs to query next next page from server using start after functionality (if matches array is >= 40 and !endOfMatches)
+      // if matches exist after current window
+        // setCurrPage++
+        // if no matches exist after new window, set endOfMatches(true)
+        // update to new window (mindful if < 20 exist in window)
+      
+      const matches = allMatches.current.get(currLeague.current);
+
+      const windowEnd = (page.current + 1) * pageSize.current;
+
+      if (!endOfMatches.current) {
+        
+        // first try to slide window since new page should already be loaded (always one extra ready)
+        if (matches.length > windowEnd) {
+          // matches exist after current window, safe to shift window
+          page.current = page.current + 1;
+
+          // set matches window, using Math.min in case of < pageSize new matches
+          setMatchesWindow(matches.slice(page.current * pageSize.current, 
+            Math.min((page.current + 1) * pageSize.current), matches.length));
+
+        }
+
+
+        // then query for next page of matches
+        const q = query(
+          collection(db, 'matches'),
+          where('league_id', '==', currLeague.current),
+          orderBy('timestamp', 'desc'),
+          orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
+          startAfter(matches[matches.length - 1].timestamp, matches[matches.length - 1].league_id),
+          limit(pageSize.current)
+        );
+
+
+        const querySnapshot = await getDocsFromServer(q);
+
+        // if snaphot empty, this is end of matches
+        if (querySnapshot.empty) {
+          endOfMatches.current = true;
+        }
+
+
+        // update allMatches map with querySnapshot
+        querySnapshot.forEach((doc) => {
+          matches.push({id: doc.id, ...doc.data()});
+        });
+        
+        allMatches.current.set(currLeague.current, matches);
+      } else {
+        console.log("End of matches reached, cannot go to next page");
+      }
+
+
+    } catch (error) {
+      throw error;
+    }
+  }
   // prevPage()
 
 }
