@@ -513,12 +513,12 @@ export function useMatches() {
 
       // set matchesWindow to first page of matches
       // uses current page and page size to calculate window 
-      if (matches.length <= 20) {
+      if (matches.length <= pageSize.current) {
         // if less than one page of matches, set endOfMatches to true
         endOfMatches.current = true;
         setMatchesWindow(matches.slice(0, matches.length));
       } else {
-        setMatchesWindow(matches.slice(0, 20));
+        setMatchesWindow(matches.slice(0, pageSize.current));
       }
       // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
       
@@ -632,10 +632,7 @@ export function useMatches() {
 
   
 
-  
-
-  //  setCurrLeague (leagueId)
-        // should 
+ 
   // nextPage()
   async function nextPage() {
     try {
@@ -659,6 +656,11 @@ export function useMatches() {
           // set matches window, using Math.min in case of < pageSize new matches
           setMatchesWindow(matches.slice(page.current * pageSize.current, 
             Math.min((page.current + 1) * pageSize.current), matches.length));
+
+          if (page.current > 0) {
+            startOfMatches.current = false;
+          }
+          
 
         }
 
@@ -698,5 +700,28 @@ export function useMatches() {
     }
   }
   // prevPage()
+
+  async function prevPage() {
+    try {
+      if (startOfMatches.current) {
+        console.log("Start of matches reached, cannot go to previous page");
+        return;
+      }
+
+      // decrement page number
+      page.current = page.current - 1;
+
+      // set new window based on page number
+      setMatchesWindow(allMatches.get(currLeague.current).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
+
+      // check if start of pages
+      if (page.current < 1) {
+        startOfMatches.current = true;
+      }
+
+    } catch (error) {
+      throw error;
+    }
+  }
 
 }
