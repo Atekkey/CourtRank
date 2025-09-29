@@ -510,6 +510,8 @@ export function useMatches() {
       // set page to 0
       page.current = 0;
 
+      startOfMatches.current = true;
+
 
       // set matchesWindow to first page of matches
       // uses current page and page size to calculate window 
@@ -723,5 +725,7 @@ export function useMatches() {
       throw error;
     }
   }
+
+  return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatches.current, startOfMatches: startOfMatches.current };
 
 }
