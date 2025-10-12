@@ -94,13 +94,13 @@ export function generateFakeMatches(count = 50, startTime = 1000, leagueId = 'le
 
 // const { getDocsFromCache, getDocsFromServer } = require('firebase/firestore');
 
-describe('fetchLeagueMatches', () => {
+describe('fetchLeagueMatches Tests', () => {
   // clear mock values before each test
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test("CASE: Cache has 40 matches, no server matches exist", async () => {
+  test("CASE 0: Cache has 40 matches, no server matches exist", async () => {
     const fakeCacheMatches = generateFakeMatches(40, 1000, 'leagueA');
     const fakeServerMatches = [];
 
@@ -126,7 +126,7 @@ describe('fetchLeagueMatches', () => {
     });
   });
 
-  test("CASE: Cache has 40 matches, server has 20 newer matches", async () => {
+  test("CASE 1: Cache has 40 matches, server has 20 newer matches", async () => {
     const fakeCacheMatches = generateFakeMatches(40, 1000, 'leagueA');
     const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
 
@@ -155,7 +155,7 @@ describe('fetchLeagueMatches', () => {
     });
   });
 
-  test("CASE: Cache has 40 matches, 40+ newer server matches exist", async () => {
+  test("CASE 2: Cache has 40 matches, 40+ newer server matches exist", async () => {
     const fakeCacheMatches = generateFakeMatches(40, 1000, 'leagueA');
     const fakeServerMatches = generateFakeMatches(40, 1400, 'leagueA');
 
@@ -181,7 +181,7 @@ describe('fetchLeagueMatches', () => {
     });
   });
 
-  test("CASE: Cache has 20 matches, no other matches exist", async () => {
+  test("CASE 3: Cache has 20 matches, no other matches exist", async () => {
     const fakeCacheMatches = generateFakeMatches(20, 1000, 'leagueA');
     const fakeServerMatches = [];
 
@@ -207,7 +207,7 @@ describe('fetchLeagueMatches', () => {
     });
   });
 
-  test("CASE: Cache has 0 matches, server has 10 matches", async () => {
+  test("CASE 4: Cache has 0 matches, server has 10 matches", async () => {
     const fakeCacheMatches = [];
     const fakeServerMatches = generateFakeMatches(10, 1000, 'leagueA');
 
@@ -235,7 +235,7 @@ describe('fetchLeagueMatches', () => {
 
   // DISCLAIMER: This test will fail due to the nature of the mock firestore setup. If the updateSnapshot logic is removed from hook
   // to better simulate this edge case, this test works as expected. This is a very unlikely edge case anyway.
-  // test("CASE: Cache has 20 matches, no new matches exist, 20 OLDER matches exist on server", async () => {
+  // test("CASE 5: Cache has 20 matches, no new matches exist, 20 OLDER matches exist on server", async () => {
   //   const fakeCacheMatches = generateFakeMatches(20, 4000, 'leagueA');
   //   const fakeServerMatches = generateFakeMatches(20, 1000, 'leagueA');
 
@@ -266,4 +266,144 @@ describe('fetchLeagueMatches', () => {
   //     expect(matches).toEqual(correctMatches); // Directly compare the pure array
   //   });
   // });
+});
+
+describe('startUseMatches Tests', () => {
+  test("CASE 0: allMatches already has data", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
+
+    const mockFirestore = createMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+
+    let matches = [];
+
+    // call fetchLeagueMatches
+    await act(async () => {
+      matches = await result.current.fetchLeagueMatches('leagueA');
+    });
+
+    result.current.startUseMatches(['leagueA']); 
+
+    let matchesAfter = [];
+
+    await act(async () => {
+      matchesAfter = await result.current.fetchLeagueMatches('leagueA');
+    });
+
+    await waitFor(() => {
+      expect(matches.length).toBe(20);
+      expect(matchesAfter.length).toBe(20);
+      expect(matchesAfter).toEqual(matches); 
+      expect(matchesAfter).toEqual(fakeServerMatches); 
+    });
+  });
+
+  test("CASE 1: setLeague, leagueID that doesn't exist in allMatches", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
+
+    const mockFirestore = createMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+
+    
+    // setLeague to non-existent league, should throw error
+    expect(() => 
+      result.current.setLeague('leagueB').toThrow("League not found in useMatches hook"));
+  });
+
+  test("CASE 2: setLeague, no matches exist for league yet", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
+
+    const mockFirestore = createMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+
+    
+    expect(result.current.allMatches.current.get('leagueA').length).toBe(0);
+    
+   
+    
+    await act(async () => {
+      await result.current.setLeague('leagueA');
+
+    });
+
+    await waitFor(() => {
+      expect(result.current.allMatches.current.get('leagueA').length).toBe(20);
+      expect(result.current.allMatches.current.get('leagueA')).toEqual(fakeServerMatches); 
+    });
+  });
+
+  test("CASE 3: setLeague, matches exist, window should be set correctly", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(40, 1400, 'leagueA');
+
+    const mockFirestore = createMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+    await result.current.fetchLeagueMatches('leagueA');
+    
+   
+    await act(async () => {
+      await result.current.setLeague('leagueA');
+
+    });
+
+    await waitFor(() => {
+      expect(result.current.matchesWindow.length).toBe(20);
+      expect(result.current.matchesWindow).toEqual(fakeServerMatches.slice(0,20)); 
+    });
+  });
+
+  test("CASE 4: setLeague, matches exist, window should be set correctly", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(15, 1400, 'leagueA');
+
+    const mockFirestore = createMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+    await result.current.fetchLeagueMatches('leagueA');
+    
+   
+    await act(async () => {
+      await result.current.setLeague('leagueA');
+
+    });
+
+    await waitFor(() => {
+      expect(result.current.matchesWindow.length).toBe(15);
+      expect(result.current.matchesWindow).toEqual(fakeServerMatches.slice(0,15)); 
+      expect(result.current.endOfMatches).toBe(true);
+    });
+  });
+
 });
