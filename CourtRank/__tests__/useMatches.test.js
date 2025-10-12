@@ -269,6 +269,10 @@ describe('fetchLeagueMatches Tests', () => {
 });
 
 describe('startUseMatches Tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  
   test("CASE 0: allMatches already has data", async () => {
     const fakeCacheMatches = [];
     const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
