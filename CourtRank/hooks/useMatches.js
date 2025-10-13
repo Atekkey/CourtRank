@@ -118,7 +118,11 @@ export function useMatches(mockFirestore) {
           matches.push({id: doc.id, ...doc.data()});
         });
 
+        console.log("Number of matches fetched from server: ", matches.length);
+
         return matches;
+
+    
 
       } 
 
@@ -265,7 +269,8 @@ export function useMatches(mockFirestore) {
 
         }
       } else {
-        console.log("End of matches reached, cannot go to next page");
+        throw new Error("Already at end of matches, cannot go to next page");
+        
       }
 
 

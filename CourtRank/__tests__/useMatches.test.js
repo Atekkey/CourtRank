@@ -46,21 +46,54 @@ function createMockFirestore({ cacheMatches = [], serverMatches = [] }) {
   return {
     getDocsFromCache: jest.fn().mockResolvedValue({
       empty: cacheMatches.length === 0,
-      // docs: cacheMatches.map(m => ({ id: m.id, data: () => m })),
-
       docs: cacheMatches.map((m) => ({ id: m.id, data: () => m })),
-        forEach: function (callback) {
+      forEach: function (callback) {
           this.docs.forEach(callback);
-    },
+      },
     }),
     getDocsFromServer: jest.fn().mockResolvedValue({
       empty: serverMatches.length === 0,
-      // docs: serverMatches.map(m => ({ id: m.id, data: () => m })),
-
       docs: serverMatches.map((m) => ({ id: m.id, data: () => m })),
-    forEach: function (callback) {
-      this.docs.forEach(callback);
-    },
+      forEach: function (callback) {
+        this.docs.forEach(callback);
+      },
+    }),
+    collection: jest.fn(),
+    query: jest.fn(),
+    where: jest.fn(),
+    orderBy: jest.fn(),
+    limit: jest.fn(),
+    startAfter: jest.fn(),
+    endBefore: jest.fn(),
+    db: {},
+  };
+}
+
+function createPaginatedMockFirestore({ cacheMatches = [], serverMatches = [] }) {
+  let callCount = 0; // Track the number of calls to getDocsFromServer
+
+  return {
+    getDocsFromCache: jest.fn().mockResolvedValue({
+      empty: cacheMatches.length === 0,
+      docs: cacheMatches.map((m) => ({ id: m.id, data: () => m })),
+      forEach: function (callback) {
+        this.docs.forEach(callback);
+      },
+    }),
+    getDocsFromServer: jest.fn().mockImplementation(() => {
+      console.log("getDocsFromServer called, call count: ", callCount);
+      const start = callCount === 0 ? 0 : 40 + (callCount - 1) * 20; // First call returns 40, subsequent calls return 20
+      const end = callCount === 0 ? 40 : start + 20; // First call ends at 40, subsequent calls end at +20
+      const matchesToReturn = serverMatches.slice(start, end);
+      callCount++; // Increment the call count for the next invocation
+
+      return Promise.resolve({
+        empty: matchesToReturn.length === 0,
+        docs: matchesToReturn.map((m) => ({ id: m.id, data: () => m })),
+        forEach: function (callback) {
+          this.docs.forEach(callback);
+        },
+      });
     }),
     collection: jest.fn(),
     query: jest.fn(),
@@ -272,7 +305,7 @@ describe('startUseMatches Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  
+
   test("CASE 0: allMatches already has data", async () => {
     const fakeCacheMatches = [];
     const fakeServerMatches = generateFakeMatches(20, 1400, 'leagueA');
@@ -409,5 +442,91 @@ describe('startUseMatches Tests', () => {
       expect(result.current.endOfMatches).toBe(true);
     });
   });
+
+});
+
+describe('nextPage + prevPage Tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test("CASE 0: nextPage, 60 server matches, shifts window and sets endOfMatches", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(60, 600, 'leagueA');
+
+    const mockFirestore = createPaginatedMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+
+    let matches = [];
+
+    await act(async () => {
+      await result.current.setLeague('leagueA');
+    });
+
+    matches = result.current.allMatches.current.get('leagueA');
+    console.log("All matches after initial fetch:", matches);
+
+    await waitFor(() => {
+      // should only have two pages (40 matches) loaded
+      // window should be first 20
+      expect(matches.length).toBe(40);
+      expect(result.current.matchesWindow).toEqual(matches.slice(0,20));
+      expect(result.current.startOfMatches).toBe(true);
+      expect(result.current.endOfMatches).toBe(false);
+
+    });
+
+    await act(async () => {
+      // Call nextPage, should shift window and fetch 20 more matches
+      await result.current.nextPage();
+    });
+
+    
+
+    await waitFor(() => {
+      // window should be second 20
+      expect(result.current.matchesWindow).toEqual(matches.slice(20, 40));
+
+      // should be 60 matches total now
+      expect(matches.length).toBe(60);
+      expect(matches).toEqual(fakeServerMatches);
+
+      // one extra page should be loaded, not end of matches
+      expect(result.current.endOfMatches).toBe(false);
+      expect(result.current.startOfMatches).toBe(false);
+    });
+
+    await act(async () => {
+      // Call nextPage, should shift window and fetch 20 more matches
+      await result.current.nextPage();
+    });
+
+    
+
+    await waitFor(() => {
+      expect(matches.length).toBe(60);
+      expect(matches).toEqual(fakeServerMatches); // Directly compare the pure array
+
+      // shoud be at endOfMatches now since no more matches to fetch
+      expect(result.current.matchesWindow).toEqual(matches.slice(40, 60));
+      expect(result.current.endOfMatches).toBe(true);
+      expect(result.current.startOfMatches).toBe(false);
+    });
+
+    await act(async () => {
+      // Call nextPage at endOfMatches, should throw error
+      expect(() => 
+        result.current.nextPage().toThrow("error"));
+    });
+  });
+
+  
+
 
 });
