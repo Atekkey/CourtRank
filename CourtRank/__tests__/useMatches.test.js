@@ -450,7 +450,7 @@ describe('nextPage + prevPage Tests', () => {
     jest.clearAllMocks();
   });
 
-  test("CASE 0: nextPage, 60 server matches, shifts window and sets endOfMatches", async () => {
+  test("CASE 0: nextPage, all tests", async () => {
     const fakeCacheMatches = [];
     const fakeServerMatches = generateFakeMatches(60, 600, 'leagueA');
 
@@ -526,7 +526,114 @@ describe('nextPage + prevPage Tests', () => {
     });
   });
 
-  
+  test("CASE 1: prevPage, all tests", async () => {
+    const fakeCacheMatches = [];
+    const fakeServerMatches = generateFakeMatches(80, 600, 'leagueA');
+
+    const mockFirestore = createPaginatedMockFirestore({
+      cacheMatches: fakeCacheMatches,
+      serverMatches: fakeServerMatches,
+    });
+
+    // start fresh hook
+    const { result } = renderHook(() => useMatches(mockFirestore));
+    result.current.startUseMatches(['leagueA']);
+
+    let matches = [];
+
+    await act(async () => {
+      await result.current.setLeague('leagueA');
+    });
+
+    matches = result.current.allMatches.current.get('leagueA');
+    console.log("All matches after initial fetch:", matches);
+
+    await waitFor(() => {
+      // should only have two pages (40 matches) loaded
+      // window should be first 20
+      expect(matches.length).toBe(40);
+      expect(result.current.matchesWindow).toEqual(matches.slice(0,20));
+      expect(result.current.startOfMatches).toBe(true);
+      expect(result.current.endOfMatches).toBe(false);
+
+    });
+
+    await act(async () => {
+      // startOfMatches should be true
+      expect(result.current.startOfMatches).toBe(true);
+
+      // Call prevPage at startOfMatches, should throw error
+      expect(() => 
+        result.current.prevPage().toThrow("error"));
+    });
+
+    
+
+    await waitFor(() => {
+      // window should be first 20
+      expect(result.current.matchesWindow).toEqual(matches.slice(0, 20));
+
+      // should be 40 matches total still
+      expect(matches.length).toBe(40);
+      expect(matches).toEqual(fakeServerMatches.slice(0,40));
+
+      // should still be at startOfMatches, end of matches false
+      expect(result.current.endOfMatches).toBe(false);
+      expect(result.current.startOfMatches).toBe(true);
+    });
+
+    await act(async () => {
+      // Call nextPage 3 times to reach end
+      await result.current.nextPage();
+      await result.current.nextPage();
+      await result.current.nextPage();
+    });
+
+    
+
+    await waitFor(() => {
+      expect(matches.length).toBe(80);
+      expect(matches).toEqual(fakeServerMatches); // Directly compare the pure array
+
+      // shoud be at endOfMatches now since no more matches to fetch
+      expect(result.current.matchesWindow).toEqual(matches.slice(60, 80));
+      expect(result.current.endOfMatches).toBe(true);
+      expect(result.current.startOfMatches).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.prevPage();
+    });
+
+    await waitFor(() => {
+      // window should be second 20
+      expect(result.current.matchesWindow).toEqual(matches.slice(40, 60));
+      expect(result.current.endOfMatches).toBe(false);
+      expect(result.current.startOfMatches).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.prevPage();
+    });
+
+    await waitFor(() => {
+      // window should be second 20
+      expect(result.current.matchesWindow).toEqual(matches.slice(20, 40));
+      expect(result.current.endOfMatches).toBe(false);
+      expect(result.current.startOfMatches).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.prevPage();
+    });
+
+    await waitFor(() => {
+      // window should be second 20
+      expect(result.current.matchesWindow).toEqual(matches.slice(0, 20));
+      expect(result.current.endOfMatches).toBe(false);
+      expect(result.current.startOfMatches).toBe(true);
+    });
+  });
 
 
 });

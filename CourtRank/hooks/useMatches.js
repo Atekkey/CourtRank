@@ -283,8 +283,7 @@ export function useMatches(mockFirestore) {
   async function prevPage() {
     try {
       if (startOfMatches.current) {
-        console.log("Start of matches reached, cannot go to previous page");
-        return;
+        throw new Error("Already at start of matches, cannot go to previous page");
       }
 
       // decrement page number
@@ -296,7 +295,7 @@ export function useMatches(mockFirestore) {
       }
 
       // set new window based on page number
-      setMatchesWindow(allMatches.get(currLeague.current).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
+      setMatchesWindow(allMatches.current.get(currLeague.current).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
 
       // check if start of pages
       if (page.current < 1) {
