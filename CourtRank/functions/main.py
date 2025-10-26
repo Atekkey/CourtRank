@@ -10,6 +10,8 @@ from firebase_functions.options import set_global_options
 from firebase_admin import initialize_app
 from cloudevents.http import CloudEvent
 from firebase_admin import firestore
+from numpy import exp as npexp, std as npstd
+from math import ceil
 
 set_global_options(max_instances=10)
 
@@ -31,6 +33,23 @@ def teamUpdateRating(ratingA, ratingB, kFactor):
     A = [ratingA[i] + changeA[i] for i in range(len(ratingA))]
     B = [ratingB[i] + changeB[i] for i in range(len(ratingB))]
     return A, B
+
+def calculateK(teamA = None, teamB = None, baseK=40):
+    if teamA is None or teamB is None:
+        return baseK
+    try:
+        highStd = max(npstd(teamA), npstd(teamB)) # Get highest std
+        sigmoid = lambda x: 1 / (1 + npexp(-x))
+        stdAdj = ((-1 * sigmoid(highStd / 100)) + 1.5)  # Get sigmoid such that higher std gives lower value 
+        # Adjusted such that range is (0.5 to 1), then (-0.5 to -1) then (1 to 0.5)
+        ret = ceil(baseK * stdAdj) # mult that factor [0,1] by baseK
+        if ret < baseK//3:
+            return baseK//3
+        if ret > baseK:
+            return baseK
+        return ret
+    except:
+        return baseK
 
 @firestore_fn.on_document_created(document="matches/{matchId}")
 def on_match_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot | None]) -> None:
@@ -54,8 +73,10 @@ def on_match_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot | N
     loseInput = [pair[1] for pair in losePairs]
     
     avgWin, avgLose = sum(winInput) / len(winInput), sum(loseInput) / len(loseInput)
-    
-    winOutput, loseOutput = teamUpdateRating(winInput, loseInput, league_k_factor)
+
+    new_k_factor = calculateK(winInput, loseInput, baseK=league_k_factor)
+
+    winOutput, loseOutput = teamUpdateRating(winInput, loseInput, new_k_factor)
     
     db = firestore.client()
     doc_ref = db.collection("leagues").document(leagueID)
