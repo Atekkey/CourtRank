@@ -22,3 +22,5 @@ npm install firebase
 Be in Dir: CourtRank/CourtRank
 $ npx expo start  
 
+## Adds
+npm install lucide-react

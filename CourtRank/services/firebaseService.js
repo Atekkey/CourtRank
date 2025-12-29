@@ -386,3 +386,36 @@ export const getAllMatches = async () => {
     throw error;
   }
 }
+
+// Date
+export const updateLeagueEndDate = async (leagueId, endDate) => {
+  try {
+    if (!leagueId) {
+      console.error('League ID is required');
+      return false;
+    }
+
+    const leagueRef = doc(db, 'leagues', leagueId);
+    
+    const leagueSnap = await getDoc(leagueRef);
+    if (!leagueSnap.exists()) {
+      console.error('League not found');
+      return false;
+    }
+
+    await updateDoc(leagueRef, {
+      league_end_date: endDate,
+      updated_at: new Date()
+    });
+
+    console.log('League end date updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating league end date:', error);
+    return false;
+  }
+};
+
+export const removeLeagueEndDate = async (leagueId) => {
+  return await updateLeagueEndDate(leagueId, null);
+};

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, updateLeagueEndDate } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
+import { X, Calendar } from 'lucide-react';
 
 
 export default function MyLeagues() {
@@ -29,8 +30,9 @@ export default function MyLeagues() {
     players: [],
     description: "",
     password: "",
+    archived: false,
   });
-  const expiryImplemented = false;
+  const expiryImplemented = true;
   const privateImplemented = true;
   // Log & Search
   const [search, setSearch] = useState('');
@@ -495,7 +497,8 @@ export default function MyLeagues() {
         whitelist_pids: [],
         players: [],
         description: "",
-        password: ""
+        password: "",
+        archived: false
       });
 
       // Show success notification
@@ -984,6 +987,180 @@ export default function MyLeagues() {
   );
   
 
+  // DATE MODAL
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [savedDate, setSavedDate] = useState('');
+  
+  // const handleSaveDate = async () => {
+  //   if (!selectedDate) {
+  //     if (Platform.OS === 'web') { window.alert('Please select a date'); } 
+  //     else { Alert.alert('Error', 'Please select a date'); }
+  //     return;
+  //   }
+    
+  //   const endDate = new Date(selectedDate).getTime();
+    
+  //   await updateLeagueEndDate(curLeague.league_id, endDate);
+    
+  //   setSavedDate(selectedDate);
+  //   setShowDateModal(false);
+    
+  //   if (Platform.OS === 'web') { window.alert('League end date set successfully'); } 
+  //   else { Alert.alert('Success', 'League end date set successfully'); }
+  // };
+  
+  
+  const handleCancelDate = () => {
+    setSelectedDate(savedDate); setShowDateModal(false);
+  };
+  
+  const parseDateFromMMDDYYYY = (dateStr) => {
+    if (!dateStr || dateStr.length < 10) return null;
+    
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    
+    const month = parseInt(parts[0], 10) - 1 ; // -1 for 0 idx
+    const day = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 2000) return null;
+    
+    return new Date(year, month, day);
+  };
+
+  const formatDateToMMDDYYYY = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  const handleSaveDate = async () => {
+    if (!selectedDate && !curLeague?.league_end_date) {
+      if (Platform.OS === 'web') {
+        window.alert('Please select a date or leave blank to remove expiration');
+      } else {
+        Alert.alert('Error', 'Please select a date or leave blank to remove expiration');
+      }
+      return;
+    }
+    
+    try {
+      let endDate = null;
+      
+      if (selectedDate) {
+        const parsedDate = parseDateFromMMDDYYYY(selectedDate);
+        if (!parsedDate) {
+          if (Platform.OS === 'web') {
+            window.alert('Invalid date format. Please use DD/MM/YYYY');
+          } else {
+            Alert.alert('Error', 'Invalid date format. Please use DD/MM/YYYY');
+          }
+          return;
+        }
+        endDate = parsedDate.getTime();
+      }
+      
+      // Update league end date in Firebase
+      const success = await updateLeagueEndDate(curLeague.league_id, endDate);
+      
+      if (!success) {
+        throw new Error('Failed to update league end date');
+      }
+      
+      setSavedDate(selectedDate);
+      setShowDateModal(false);
+      
+      // Refresh leagues to show updated data
+      await handleRefresh();
+      
+      if (Platform.OS === 'web') {
+        window.alert(endDate ? 'League end date set successfully' : 'League end date removed');
+      } else {
+        Alert.alert('Success', endDate ? 'League end date set successfully' : 'League end date removed');
+      }
+    } catch (error) {
+      console.error('Error updating league end date:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to update league end date. Please try again.');
+      } else {
+        Alert.alert('Error', 'Failed to update league end date. Please try again.');
+      }
+    }
+  };
+  
+  const dateModal = (
+    <Modal
+        visible={showDateModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCancelDate}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeaderDate}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Calendar color="white" size={24} style={{ marginRight: 10 }} />
+              <Text style={styles.modalTitle}>Set League End Date</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={handleCancelDate}
+            >
+              <X color="white" size={24} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>League End Date *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={selectedDate}
+                onChangeText={setSelectedDate}
+                placeholder="MM/DD/YYYY (e.g., 08/25/2025)"
+                placeholderTextColor="#999"
+              />
+              <Text style={styles_date.dateHintText}>
+                Leave blank for no expiration date
+              </Text>
+            </View>
+            
+            {curLeague && (
+              <View style={styles_date.leagueInfoBox}>
+                <Text style={styles_date.leagueInfoTitle}>Current League:  {curLeague.league_name}</Text>
+                {curLeague.league_end_date && (
+                  <Text style={styles_date.leagueInfoText}>
+                    Current end date: {new Date(curLeague.league_end_date).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={handleCancelDate}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={handleSaveDate}
+            >
+              <Text style={styles.createButtonText}>Save Date</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+  );
+
   // LEAGUE CARDS
   const leagueCards = myLeagues.map(league => { 
     const stats = league?.elo_info[user?.uid];
@@ -991,18 +1168,136 @@ export default function MyLeagues() {
     const LID = league.league_id;
     const leagueExpDate = league.league_end_date;
     const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
-
     return (
-    <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
+      leagueDidExpire ? null : (
+    <View key={LID} style={[styles.leagueCard]}>
       <View style={styles.leagueHeader}>
 
         <View style={styles.leagueHeaderLeft}>
 
         <Text style={styles.leagueName}>{league.league_name}</Text>
-        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => {}}>
-          {/* <Text style={styles.leagueEndText}>📅</Text> */}
+        
+        
+        <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
+        </View>
+
+
+        <View style={styles.leagueHeaderRight}>
+          <Text style={styles.leagueInfo}>
+            👥 {league.players.length} Competitors
+          </Text>
+          <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
+        
+          
+        </View>
+
+        {(expiryImplemented) && 
+              (<TouchableOpacity style={styles.leagueEnd} onPress={() => {
+                if (user?.uid == league?.admin_pid) {
+                setCurLeague(league);setShowDateModal(!showDateModal)}
+                }}>
+          <Text style={styles.leagueEndText}>{league.league_end_date && (formatDateToMMDDYYYY(league.league_end_date) + "  ")}📅</Text>
         </TouchableOpacity>)}
         
+         
+      </View>
+      
+      {/* Stats Section */}
+      <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>ELO Rating</Text>
+          <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
+            {stats?.elo || ""}
+          </Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Win Rate</Text>
+          <Text style={styles.statValue}>
+            {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
+          </Text>
+        </View>
+        
+        <View style={styles.statItem}>
+          <Text style={styles.statLabel}>Games</Text>
+          <Text style={styles.statValue}>{numGames}</Text>
+        </View>
+      </View>
+
+      {/* W-T-L Record */}
+      <View style={[styles.recordContainer]}>
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumberWin}>{stats?.wins ?? 0}</Text>
+          <Text style={styles.recordLabel}>Wins</Text>
+        </View>
+        <View style={styles.recordSeparator} />
+        <View style={styles.recordItem}>
+           <Text style={styles.recordNumberLoss}>{stats?.losses ?? 0}</Text>
+          <Text style={styles.recordLabel}>Losses</Text>
+        </View>
+      </View>
+
+
+      {/* Action Buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
+          <Text style={styles.viewButtonText}>Match History</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
+            <Text style={styles.viewButtonText}>Leaderboard</Text>
+          : <Text style={styles.viewButtonText}>Leader-board</Text>
+          }
+        </TouchableOpacity>
+        
+        { user?.uid === league?.admin_pid ? 
+        (<TouchableOpacity 
+          style={styles.notifButton}
+          onPress={() => notifClicked(league)}
+        >
+          {Platform.OS == "web" && window.innerWidth >= 800 ? 
+          <Text style={styles.leaveButtonText}>Send Notification</Text>
+          :
+          <Text style={styles.leaveButtonText}>Notify Users</Text>
+        }
+        </TouchableOpacity>) 
+        :
+        (<TouchableOpacity 
+          style={styles.leaveButton}
+          onPress={() => handleLeaveLeague(LID, league.league_name)}
+        >
+          <Text style={styles.leaveButtonText}>Leave League</Text>
+        </TouchableOpacity>)
+        }
+      </View>
+
+      
+      {/* Log Game Button */}
+      {(!leagueDidExpire) && (<TouchableOpacity 
+        style={styles.logGameButton}
+        onPress={() => logPressed(league)}
+      >
+        <Text style={styles.logGameButtonText}>+</Text>
+      </TouchableOpacity>)}
+    </View>
+    )
+    )
+  });
+
+  const expiredLeagueCards = myLeagues.map(league => { 
+    const stats = league?.elo_info[user?.uid];
+    const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
+    const LID = league.league_id;
+    const leagueExpDate = league.league_end_date;
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
+
+    return (
+    (!leagueDidExpire) ? null :
+    <View key={LID} style={[styles.leagueCard, styles.leagueCardExpired]}>
+      <View style={styles.leagueHeader}>
+        <View style={styles.leagueHeaderLeft}>
+        <Text style={styles.leagueName}>{league.league_name}</Text>  
         <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
         </View>
 
@@ -1011,15 +1306,20 @@ export default function MyLeagues() {
             👥 {league.players.length} Competitors
           </Text>
           <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
-          
+        
           
         </View>
+
+        {(expiryImplemented) && 
+              (<TouchableOpacity style={styles.leagueEnd} onPress={() => {
+                if (user?.uid == league?.admin_pid) {
+                setCurLeague(league);setShowDateModal(!showDateModal)}
+                }}>
+          <Text style={styles.leagueEndText}>{league.league_end_date && (formatDateToMMDDYYYY(league.league_end_date) + "  ")}📅</Text>
+        </TouchableOpacity>)}
         
          
       </View>
-      
-      {/* <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text> */}
-      {/* <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text> */}
 
       {/* Stats Section */}
       <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
@@ -1044,17 +1344,13 @@ export default function MyLeagues() {
       </View>
 
       {/* W-T-L Record */}
-      <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
+      <View style={[styles.recordContainer, styles.recordContainerExpired]}>
         <View style={styles.recordItem}>
            <Text style={styles.recordNumberWin}>{stats?.wins ?? 0}</Text>
           <Text style={styles.recordLabel}>Wins</Text>
         </View>
         <View style={styles.recordSeparator} />
-        {/* <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats?.ties ?? 0}</Text>
-          <Text style={styles.recordLabel}>Ties</Text>
-        </View>
-        <View style={styles.recordSeparator} /> */}
+
         <View style={styles.recordItem}>
            <Text style={styles.recordNumberLoss}>{stats?.losses ?? 0}</Text>
           <Text style={styles.recordLabel}>Losses</Text>
@@ -1108,6 +1404,10 @@ export default function MyLeagues() {
     )
   });
 
+  const horzBar = (
+    <View style={{ height: 1, backgroundColor: '#ccc', marginVertical: 40 }}> </View>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
     refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh}/>}
@@ -1115,12 +1415,15 @@ export default function MyLeagues() {
       {header}
       {resultsCount}
       {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
+      {myLeagues.length === 0 ? ( null ) : ( horzBar ) }
+      {myLeagues.length === 0 ? ( null ) : ( expiredLeagueCards ) }
 
       {createLeagueModal}
       {leaderboardModal}
       {logModal}
       {notificationModal}
       {matchHistoryModal}
+      {dateModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -1453,6 +1756,7 @@ const styles = StyleSheet.create({
   },
   leagueEndText: {
     fontSize: 18,
+    color: "#eeeeee",
   },
   leagueDescription: {
     fontSize: 14,
@@ -1629,6 +1933,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#8E24AA',
+  },
+  modalHeaderDate: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#737373',
   },
   modalTitleNotWeb: {
     fontSize: 15,
@@ -1870,9 +2183,7 @@ const styles_match = StyleSheet.create({
     
   },
   dateCard: {
-    flex: 1,
-
-    
+    flex: 1,    
   },
   teamName: {
     fontSize: 16,
@@ -1891,4 +2202,31 @@ const styles_match = StyleSheet.create({
     fontWeight: '600',
   }
 
+});
+
+const styles_date = StyleSheet.create({dateHintText: {
+  fontSize: 12,
+  color: '#999',
+  marginTop: 4,
+  fontStyle: 'italic',
+},
+leagueInfoBox: {
+  backgroundColor: '#f8f9fa',
+  padding: 15,
+  borderRadius: 8,
+  marginTop: 10,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
+leagueInfoTitle: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#666',
+  marginBottom: 5,
+},
+leagueInfoText: {
+  fontSize: 14,
+  color: '#333',
+  marginTop: 3,
+}
 });
