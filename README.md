@@ -24,3 +24,7 @@ $ npx expo start
 
 ## Adds
 npm install lucide-react
+
+# Deploy: 
+npx expo export --platform web
+firebase deploy --only hosting
