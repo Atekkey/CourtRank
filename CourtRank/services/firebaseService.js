@@ -419,3 +419,32 @@ export const updateLeagueEndDate = async (leagueId, endDate) => {
 export const removeLeagueEndDate = async (leagueId) => {
   return await updateLeagueEndDate(leagueId, null);
 };
+
+// Update User
+export const updateUserNames = async (userId, first, last) => {
+  try {
+    if (!userId) {
+      console.error('User ID is Null');
+      return false;
+    }
+
+    const userRef = doc(db, 'players', userId);
+    
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      console.error('User Not found');
+      return false;
+    }
+
+    await updateDoc(userRef, {
+      first_name: first,
+      last_name: last,
+    });
+
+    // console.log('User Names updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating Users:', error);
+    return false;
+  }
+};
