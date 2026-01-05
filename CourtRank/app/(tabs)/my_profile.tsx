@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, TextInput, ActivityIndicator, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, TextInput, ActivityIndicator, Image, Modal, Linking } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo, updateUserNames } from '../../services/firebaseService';
@@ -191,15 +191,19 @@ export default function MyProfile() {
           {showEdit && editProfileComponent}
         <TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
           <Text style={styles.settingText}>Notifications</Text>
-          {showNotif && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
+          {showNotif && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem} onPress={() => togglePrivacy()}>
           <Text style={styles.settingText}>Privacy Settings</Text>
-          {showPrivacy && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
+          {showPrivacy && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem} onPress={() => toggleHelp()}>
           <Text style={styles.settingText}>Help & Support</Text>
-          {showHelp && <Text style={styles.settingSubtext}>Email ajattek@gmail.com for assistance</Text>}
+          {showHelp && 
+          <TouchableOpacity onPress={() => Linking.openURL('mailto:courtrankhelp@gmail.com')}>
+            <Text style={[styles.settingSubtext, {marginTop: 10}]}>Email courtrankhelp@gmail.com for assistance</Text>
+          </TouchableOpacity>
+          }
         </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Sign Out</Text>

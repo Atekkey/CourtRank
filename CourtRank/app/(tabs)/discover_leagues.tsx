@@ -74,8 +74,17 @@ export default function DiscoverLeagues() {
   // Filter leagues based on search query and selected level
   useEffect(() => {
     let filtered = leagues;
+    const now = new Date();
 
-    // Filter by search query (sport name)
+    // Filter by ended
+    filtered = filtered.filter(league => {
+      if (league.league_end_date) {
+        return league.league_end_date > now;
+      }
+      return true; // Include leagues with no end date
+    });
+
+    // Filter by query
     if (searchQuery.trim()) {
       filtered = filtered.filter(league =>
         league.league_name.toLowerCase().includes(searchQuery.toLowerCase())
