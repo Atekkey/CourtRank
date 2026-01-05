@@ -1,6 +1,6 @@
 import { 
-  collection, addDoc, getDocs, doc, updateDoc, deleteDoc,getDoc,
-  query, where, orderBy, onSnapshot,setDoc,
+  collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc,
+  query, where, orderBy, onSnapshot, setDoc, writeBatch,
   arrayUnion, arrayRemove, deleteField,
   serverTimestamp 
 } from 'firebase/firestore';
@@ -418,4 +418,56 @@ export const updateLeagueEndDate = async (leagueId, endDate) => {
 
 export const removeLeagueEndDate = async (leagueId) => {
   return await updateLeagueEndDate(leagueId, null);
+};
+
+// Update User
+export const updateUserNames = async (userId, first, last) => {
+  try {
+    if (!userId) {
+      console.error('User ID is Null');
+      return false;
+    }
+
+    const userRef = doc(db, 'players', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      console.error('User Not found');
+      return false;
+    }
+
+    const batch = writeBatch(db);
+
+    batch.update(userRef, {
+      first_name: first,
+      last_name: last,
+    });
+
+    const q = query(
+      collection(db, 'leagues'),
+      where('players', 'array-contains', userId)
+    );
+    const leaguesSnapshot = await getDocs(q);
+
+    leaguesSnapshot.forEach(leagueDoc => {
+      const leagueRef = doc(db, 'leagues', leagueDoc.id);
+      const data = leagueDoc.data() || {};
+      const elo_info = data.elo_info || {};
+
+      if (!elo_info[userId]) {
+        elo_info[userId] = { first_name: first, last_name: last };
+      } else {
+        elo_info[userId].first_name = first;
+        elo_info[userId].last_name = last;
+      }
+
+      batch.update(leagueRef, { elo_info });
+    });
+
+    await batch.commit();
+
+    return true;
+  } catch (error) {
+    console.error('Error updating Users:', error);
+    return false;
+  }
 };
