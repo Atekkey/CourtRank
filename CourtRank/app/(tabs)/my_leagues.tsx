@@ -804,7 +804,7 @@ export default function MyLeagues() {
   const toggleWin = (id) => {
     setSearch('');
     setWinTeam(prev => {
-      if (prev.includes(id)) return prev;
+      if (prev.includes(id)) return prev.filter(pid => pid !== id);
       setLossTeam(lossPrev => lossPrev.filter(pid => pid !== id));
       return [...prev, id];
     });
@@ -813,16 +813,10 @@ export default function MyLeagues() {
   const toggleLoss = (id) => {
     setSearch('');
     setLossTeam(prev => {
-      if (prev.includes(id)) return prev;
+      if (prev.includes(id)) return prev.filter(pid => pid !== id);
       setWinTeam(winPrev => winPrev.filter(pid => pid !== id));
       return [...prev, id];
     });
-  };
-
-  const toggleClear = (id) => {
-    setSearch('');
-    setWinTeam(prev => prev.filter(pid => pid !== id));
-    setLossTeam(prev => prev.filter(pid => pid !== id));
   };
 
   const getPlayerNames = (team) => {
@@ -903,12 +897,6 @@ export default function MyLeagues() {
                         <Text style={styles.eloText}>{info.elo}{isLoss && ' (L)'}{isWin && ' (W)'}</Text>
                       </View>
 
-                      <TouchableOpacity
-                        style={[styles.clearCol]}
-                        onPress={() => toggleClear(id)}
-                      >
-                        <Text style={styles.teamText}>C</Text>
-                      </TouchableOpacity>
 
                       <TouchableOpacity
                         style={[styles.winCol, isWin && styles.selectedWin]}
@@ -1383,13 +1371,12 @@ export default function MyLeagues() {
           
         </View>
 
-        {(expiryImplemented) && 
-              (<TouchableOpacity style={styles.leagueEnd} onPress={() => {
+        <TouchableOpacity style={styles.leagueEnd} onPress={() => {
                 if (user?.uid == league?.admin_pid) {
                 setCurLeague(league);setShowDateModal(!showDateModal)}
                 }}>
           <Text style={styles.leagueEndText}>{league.league_end_date && (formatDateToMMDDYYYY(league.league_end_date) + "  ")}📅</Text>
-        </TouchableOpacity>)}
+        </TouchableOpacity>
         
          
       </View>
@@ -1486,7 +1473,7 @@ export default function MyLeagues() {
       onRequestClose={() => reportUnclicked()}
     >
       <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+          <View style={styles.reportModalHeader}>
             <Text style={styles.modalTitle}>Report</Text>
             <TouchableOpacity 
               style={styles.closeButton}
@@ -1534,7 +1521,7 @@ export default function MyLeagues() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.createButton, { backgroundColor: 'red' }]}
+              style={[styles.createButton, { backgroundColor: '#a2153fff' }]}
               onPress={() => {handleReportSubmit(); reportUnclicked();}}
             >
               <Text style={styles.createButtonText}>Report</Text>
@@ -2074,6 +2061,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#8E24AA',
+  },
+  reportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#a2153fff',
   },
   modalHeaderDate: {
     flexDirection: 'row',
