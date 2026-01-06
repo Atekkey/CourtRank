@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo, updateUserNames } from '../../services/firebaseService';
 import { osName } from 'expo-device';
-import { myPrint } from '../helpers';
+import { myPrint, privatePolicy } from '../helpers';
 
 export default function MyProfile() {
   const { user, userInfo, isLoading, logout } = useAuth();
@@ -13,6 +13,7 @@ export default function MyProfile() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const notifImplem = false;
 
   const hideAll = () => {
     setShowNotif(false);
@@ -189,13 +190,25 @@ export default function MyProfile() {
           <Text style={styles.settingText}>Edit Profile</Text>
         </TouchableOpacity>
           {showEdit && editProfileComponent}
-        <TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
+        
+         {notifImplem && (<TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
           <Text style={styles.settingText}>Notifications</Text>
           {showNotif && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
-        </TouchableOpacity>
+        </TouchableOpacity>)}
         <TouchableOpacity style={styles.settingItem} onPress={() => togglePrivacy()}>
-          <Text style={styles.settingText}>Privacy Settings</Text>
-          {showPrivacy && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
+          <Text style={styles.settingText}>Privacy Policy</Text>
+          {showPrivacy && (
+            (Platform.OS === 'web') ? (
+              <View style={{ marginTop: 10 }}>
+                {/* Only render raw HTML on web where div is supported */}
+                <div dangerouslySetInnerHTML={{ __html: privatePolicy }} />
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.privacypolicies.com/live/14338ca6-e95d-4764-85ff-338ef856452b')}>
+                <Text style={[styles.settingSubtext, { marginTop: 10 }]}>View the privacy policy online</Text>
+              </TouchableOpacity>
+            )
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem} onPress={() => toggleHelp()}>
           <Text style={styles.settingText}>Help & Support</Text>
