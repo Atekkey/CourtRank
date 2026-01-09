@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserNotifications } from '../../services/firebaseService';
 import Svg, { Text as SvgText } from "react-native-svg";
 import { osName } from 'expo-device';
-import { Trash } from 'lucide-react';
+// import { Trash } from 'lucide-react-native';
 
 
 const screenWidth = Dimensions.get('window').width;
@@ -59,11 +59,15 @@ export default function Index() {
   useEffect(() => {
     // Fetch user's leagues from backend
     const getNotifications = async () => {
+      if (! user?.uid) { return; }
       try {
         const notifications = await getUserNotifications(user?.uid || "");
+        if (! notifications) {
+          return;
+        }
         setNotifs(notifications);
       } catch (error) {
-        console.error('Error fetching notifications:', error);
+        console.log('Error fetching notifications:', error);
       }
     };
     getNotifications();

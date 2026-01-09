@@ -190,7 +190,7 @@ export default function MyProfile() {
         <TouchableOpacity style={styles.settingItem} onPress={() => toggleEdit()}>
           <Text style={styles.settingText}>Edit Profile</Text>
         </TouchableOpacity>
-          {showEdit && editProfileComponent}
+        {showEdit && editProfileComponent}
         
          {notifImplem && (<TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
           <Text style={styles.settingText}>Notifications</Text>

@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Calendar, Flag } from 'lucide-react';
+import { X, Calendar, Flag } from 'lucide-react-native';
 import { myPrint, checkIsProfanityAndAlert } from '../helpers';
 
 
@@ -83,7 +83,7 @@ export default function MyLeagues() {
       setMyLeagues(leagues);
       fetchAllMatchHistory();
     } catch (error) {
-      console.error('Error fetching my leagues:', error);
+      myPrint('Error fetching my leagues:', "Error");
     }
     setLoading(false);
   };
@@ -1142,10 +1142,10 @@ export default function MyLeagues() {
       }
       
       // Update league end date in Firebase
-      const success = await updateLeagueEndDate(curLeague.league_id, endDate);
+      const success = await updateLeagueEndDate(curLeague?.league_id, endDate);
       
       if (!success) {
-        throw new Error('Failed to update league end date');
+        myPrint('Failed to update league end date', "Error");
       }
       
       setSavedDate(selectedDate);
@@ -1160,12 +1160,7 @@ export default function MyLeagues() {
         Alert.alert('Success', endDate ? 'League end date set successfully' : 'League end date removed');
       }
     } catch (error) {
-      console.error('Error updating league end date:', error);
-      if (Platform.OS === 'web') {
-        window.alert('Failed to update league end date. Please try again.');
-      } else {
-        Alert.alert('Error', 'Failed to update league end date. Please try again.');
-      }
+        myPrint('Error updating league end date:', "Error");
     }
   };
   

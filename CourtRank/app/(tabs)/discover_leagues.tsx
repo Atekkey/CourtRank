@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput,
 import { getLeagues, joinLeague } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { osName } from 'expo-device';
-import { Flag } from 'lucide-react';
+import { Flag } from 'lucide-react-native';
 import { myPrint } from '../helpers';
 
 export default function DiscoverLeagues() {
@@ -41,8 +41,8 @@ export default function DiscoverLeagues() {
       setLeagues(fetchedLeagues);
       setFilteredLeagues(fetchedLeagues);
     } catch (err) {
-      console.error("Error fetching leagues:", err);
-      setError("Failed to load leagues. Please try again.");
+      console.log("Error fetching leagues:", err);
+      myPrint("Failed to load leagues. Please try again.", "Error");
       setLeagues([]);
       setFilteredLeagues([]);
     } finally {
@@ -122,12 +122,12 @@ export default function DiscoverLeagues() {
       if (window.confirm('Are you sure you want to join this league?')) {
         try {
           await joinLeague(leagueId, user?.uid);
-          Alert.alert('Success', 'You have joined the league!');
+          myPrint('You have joined the league!', 'Success');
           const updatedLeagues = await getLeagues();
           setLeagues(updatedLeagues);
         } catch (joinError) {
-          console.error('Error joining league:', joinError);
-          Alert.alert('Error', 'Failed to join league. Please try again.');
+          console.log('Error joining league:', joinError);
+          myPrint('Failed to join league. Please try again.', 'Error');
         }
       }
     } else {
@@ -146,15 +146,14 @@ export default function DiscoverLeagues() {
                   const updatedLeagues = await getLeagues();
                   setLeagues(updatedLeagues);
                 } catch (joinError) {
-                  console.error('Error joining league:', joinError);
-                  Alert.alert('Error', 'Failed to join league. Please try again.');
+                  myPrint('Failed to join league. Please try again.', 'Error');
                 }
               }
             }
           ]
         );
       } catch (error) {
-        Alert.alert('Error', 'Failed to join league. Please try again.');
+        myPrint('Failed to join league. Please try again.', 'Error');
       }
     }
   };
@@ -310,7 +309,7 @@ export default function DiscoverLeagues() {
         }
         await Linking.openURL(mailtoUrl);
       } catch (error) {
-        console.error('Error launching email client:', error);
+        console.log('Error launching email client:', error);
         if (Platform.OS === 'web') {
           window.alert('Failed to launch email client.');
         } else {
