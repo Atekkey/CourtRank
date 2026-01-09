@@ -5,8 +5,26 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Calendar, Flag } from 'lucide-react-native';
-import { myPrint, checkIsProfanityAndAlert } from '../helpers';
+import { X, Calendar, Flag, RotateCcw } from 'lucide-react-native';
+import { myPrint, checkIsProfanityAndAlert, confirmAction } from '../helpers';
+
+// Rollback
+import { getFunctions, httpsCallable } from 'firebase/functions';
+const functions = getFunctions();
+const rollbackMatch = httpsCallable(functions, 'rollback_match');
+const handleRollback = async (matchId: string): Promise<boolean> => {
+  try {
+    await rollbackMatch({ match_id: matchId });
+    myPrint('Match rolled back successfully');
+    return true;
+  } catch (error: any) {
+    myPrint(error.message || 'Failed to rollback match', 'Rollback Failed');
+    return false;
+  }
+};
+
+
+
 
 
 export default function MyLeagues() {
@@ -995,12 +1013,31 @@ export default function MyLeagues() {
     ).sort((a,b) => b.length - a.length);
     return playerNames;
   };
+
+  const rollBackPressed = async (matchId: string) => {
+    if (!matchId) { return; }
+
+    const confirmed = await confirmAction(
+      'Are you sure you want to undo this match? ELO ratings will be reverted.',
+      'Rollback Match'
+    );
+
+    if (confirmed) {
+      const success = await handleRollback(matchId);
+      if (success) {
+        handleRefresh();
+      }
+    }
+  };
   
   const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
     if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    const playerWon = user?.uid && String(user.uid) in matchInfo.win_team;
+    const isProcessed = matchInfo.processed !== false;
+    console.log("playerWon: ", playerWon);
     return (
-      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+      <View key={matchInfo.id} style={[styles_match.matchContainer, !isProcessed && { opacity: 0.5 }]}>
 
         
         
@@ -1012,12 +1049,20 @@ export default function MyLeagues() {
                 { fontSize: Math.max(16 - index * 2, 12) }
               ]}>{name}</Text>
             ))}
+            
           </View>
         
 
           <View style={[styles_match.card, styles_match.dateCard]}>
             <Text style={styles_match.matchDate}>{date}</Text>
             <Text style={styles_match.vsText}>vs</Text>
+
+            {playerWon && (
+            <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
+              <RotateCcw size={24} color="red" />
+            </TouchableOpacity>)
+            }
+
           </View>
 
           <View style={[styles_match.card, styles_match.loserCard]}>
@@ -1066,24 +1111,6 @@ export default function MyLeagues() {
   const [showDateModal, setShowDateModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [savedDate, setSavedDate] = useState('');
-  
-  // const handleSaveDate = async () => {
-  //   if (!selectedDate) {
-  //     if (Platform.OS === 'web') { window.alert('Please select a date'); } 
-  //     else { Alert.alert('Error', 'Please select a date'); }
-  //     return;
-  //   }
-    
-  //   const endDate = new Date(selectedDate).getTime();
-    
-  //   await updateLeagueEndDate(curLeague.league_id, endDate);
-    
-  //   setSavedDate(selectedDate);
-  //   setShowDateModal(false);
-    
-  //   if (Platform.OS === 'web') { window.alert('League end date set successfully'); } 
-  //   else { Alert.alert('Success', 'League end date set successfully'); }
-  // };
   
   
   const handleCancelDate = () => {

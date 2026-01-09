@@ -12,7 +12,8 @@ import {
   User as FirebaseUser,
   getRedirectResult
 } from 'firebase/auth';
-import { db, auth } from './firebaseConfig';
+import { db, auth, functions } from './firebaseConfig';
+import { httpsCallable } from 'firebase/functions';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
@@ -217,6 +218,18 @@ export const createNotification = async (notificationInfo) => {
 // League Functions
 export const createLeague = async (data={}) => {
 
+  // Hash password server-side if provided
+  // if (data.password) {
+  //   try {
+  //     const hashPassword = httpsCallable(functions, 'hash_league_password');
+  //     const hash = await hashPassword({ password: data.password });
+  //     console.log('Password hashed successfully for league:', customId);
+  //   } catch (hashError) {
+  //     console.error('Failed to hash password:', hashError);
+  //     // Don't throw - league was created, just password hashing failed
+  //   }
+  // }
+  
   try {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
@@ -234,7 +247,7 @@ export const createLeague = async (data={}) => {
 
       elo_info: {},
       players: [],
-      password: data.password,
+      password: data.password || "",
     });
     // Add admin to players and elo_info
     await joinLeague(customId, data.admin_pid);
@@ -245,6 +258,28 @@ export const createLeague = async (data={}) => {
   }
 
 };
+
+// export const verifyLeaguePassword = async (league_id, password) => {
+//   try {
+//     const verifyPassword = httpsCallable(functions, 'verify_league_password');
+//     const result = await verifyPassword({ league_id, password });
+//     return result.data.valid;
+//   } catch (error) {
+//     console.error('Error verifying password:', error);
+//     return false;
+//   }
+// };
+
+// export const migrateLeaguePasswords = async () => {
+//   try {
+//     const migrate = httpsCallable(functions, 'migrate_league_passwords');
+//     const result = await migrate({});
+//     return result.data;
+//   } catch (error) {
+//     console.error('Error migrating passwords:', error);
+//     throw error;
+//   }
+// };
 
 export const getLeagues = async () => {
   try {
@@ -457,7 +492,7 @@ export const updateUserNames = async (userId, first, last) => {
       const data = leagueDoc.data() || {};
       const elo_info = data.elo_info || {};
 
-      if (!elo_info[userId]) {
+      if (!(elo_info[userId])) {
         elo_info[userId] = { first_name: first, last_name: last };
       } else {
         elo_info[userId].first_name = first;

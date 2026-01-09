@@ -1,5 +1,24 @@
 import { Platform, Alert  } from 'react-native';
 
+export const confirmAction = (message: string, title: string = 'Confirm'): Promise<boolean> => {
+    return new Promise((resolve) => {
+        if (Platform.OS === 'web') {
+            const result = window.confirm(`${title}\n\n${message}`);
+            resolve(result);
+        } else {
+            Alert.alert(
+                title,
+                message,
+                [
+                    { text: 'No', onPress: () => resolve(false), style: 'cancel' },
+                    { text: 'Yes', onPress: () => resolve(true) }
+                ],
+                { cancelable: false }
+            );
+        }
+    });
+};
+
 export const myPrint = (message: string, title?: string) => {
     if (title) {
         if (Platform.OS === 'web') {

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl, Linking } from 'react-native';
-import { getLeagues, joinLeague } from '../../services/firebaseService';
+import { getLeagues, joinLeague, verifyLeaguePassword } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { osName } from 'expo-device';
 import { Flag } from 'lucide-react-native';
-import { myPrint } from '../helpers';
+import { myPrint, confirmAction } from '../helpers';
 
 export default function DiscoverLeagues() {
   const [leagues, setLeagues] = useState([]);
@@ -15,8 +15,8 @@ export default function DiscoverLeagues() {
   const { user, userInfo, isLoading } = useAuth();
   const [showPassModal, setShowPassModal] = useState(false);
   const [password, setPassword] = useState("");
-  const [hiddenPass, setHiddenPass] = useState("");
   const [curLeague, setCurLeague] = useState(null);
+  const [hiddenPass, setHiddenPass] = useState("");
   
   // Report
   const [showReportModal, setShowReportModal] = useState(false);
@@ -200,8 +200,9 @@ export default function DiscoverLeagues() {
 
   const initialPassClicked = (league) => {
     setShowPassModal(true);
-    setHiddenPass(league.password);
     setCurLeague(league);
+    setHiddenPass(league.password);
+
   };
 
   const passUnclicked = () => {
@@ -210,6 +211,21 @@ export default function DiscoverLeagues() {
     setHiddenPass("");
     setCurLeague(null);
   };
+
+  // const attemptJoin = async () => {
+  //   if (!password || !curLeague) {
+  //     myPrint('Please enter a password', 'Error');
+  //     return;
+  //   }
+
+  //   const isValid = await verifyLeaguePassword(curLeague.league_id, password);
+  //   if (isValid) {
+  //     await handleJoinLeague(curLeague.league_id);
+  //     passUnclicked();
+  //   } else {
+  //     myPrint('Incorrect password. Please try again.', 'Error');
+  //   }
+  // };
 
   const attemptJoin = async () => {
     if ((password === hiddenPass) && (password !== "") && curLeague) {
@@ -223,6 +239,7 @@ export default function DiscoverLeagues() {
       }
     }
   };
+
 
   const passModal = (
       <Modal
