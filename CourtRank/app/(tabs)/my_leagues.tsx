@@ -1034,7 +1034,7 @@ export default function MyLeagues() {
     if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     const playerWon = user?.uid && String(user.uid) in matchInfo.win_team;
-    const isProcessed = matchInfo.processed !== false;
+    const isProcessed = matchInfo.processed;
     console.log("playerWon: ", playerWon);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer, !isProcessed && { opacity: 0.5 }]}>
@@ -1057,7 +1057,7 @@ export default function MyLeagues() {
             <Text style={styles_match.matchDate}>{date}</Text>
             <Text style={styles_match.vsText}>vs</Text>
 
-            {playerWon && (
+            {(playerWon && (isProcessed)) && (
             <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
               <RotateCcw size={24} color="red" />
             </TouchableOpacity>)
