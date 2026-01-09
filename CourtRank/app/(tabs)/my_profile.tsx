@@ -73,14 +73,15 @@ export default function MyProfile() {
         
         <TouchableOpacity
           style={styles.saveButton}
-          onPress={() => {
+          onPress={async () => {
             // On Save Names
             if (!userInfo) {
               return;
             }
-            const ret = updateUserNames(user.uid, firstName, lastName);
-            if(!ret){
-              myPrint("Error updating names");
+            const ret = await updateUserNames(user?.uid, firstName, lastName);
+            
+            if(!ret) {
+              myPrint("Error updating names", "Error");
               return;
             }
             // Optimistic update

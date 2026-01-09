@@ -17,6 +17,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
+import { checkIsProfanityAndAlert, myPrint } from '../app/helpers';
 
 
 
@@ -422,16 +423,19 @@ export const removeLeagueEndDate = async (leagueId) => {
 
 // Update User
 export const updateUserNames = async (userId, first, last) => {
+  if (checkIsProfanityAndAlert(first) || checkIsProfanityAndAlert(last)) {
+    return false;
+  }
   try {
     if (!userId) {
-      console.error('User ID is Null');
+      myPrint('User ID is Null', "Error");
       return false;
     }
 
     const userRef = doc(db, 'players', userId);
     const userSnap = await getDoc(userRef);
     if (!userSnap.exists()) {
-      console.error('User Not found');
+      myPrint('User Not found', "Error");
       return false;
     }
 

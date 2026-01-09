@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserNotifications } from '../../services/firebaseService';
 import Svg, { Text as SvgText } from "react-native-svg";
 import { osName } from 'expo-device';
+import { Trash } from 'lucide-react';
+
 
 const screenWidth = Dimensions.get('window').width;
 const eloHistoryImplemented = false;
@@ -147,6 +149,7 @@ export default function Index() {
               // onPress={() => markAsRead(announcement.id)}
             >
               <View style={styles.announcementHeader}>
+                
                 <View style={styles.announcementIcon}>
                   <Text style={styles.announcementIconText}>
                     📢
@@ -156,10 +159,13 @@ export default function Index() {
                   <Text style={styles.announcementTitle}>{announcement?.header || ""}</Text>
                   <Text style={styles.announcementLeague}>{announcement?.league_name || ""} --- {announcement?.timestamp.toDate().toLocaleDateString().slice(0,-5)}</Text>
                 </View>
+
               </View>
 
               <Text style={styles.announcementMessage}>{announcement?.body || ""}</Text>
               {/* <Text style={styles.announcementTimestamp}>{announcement?.timestamp || ""}</Text> */}
+
+              
             </TouchableOpacity>
           ))
         )}
@@ -169,6 +175,10 @@ export default function Index() {
 }
 
 const styles = StyleSheet.create({
+  flagRed: {
+    color: 'red',
+    padding: 5,
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

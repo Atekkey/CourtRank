@@ -6,7 +6,7 @@ import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Calendar, Flag } from 'lucide-react';
-import { myPrint } from '../helpers';
+import { myPrint, checkIsProfanityAndAlert } from '../helpers';
 
 
 export default function MyLeagues() {
@@ -439,6 +439,14 @@ export default function MyLeagues() {
   };
 
   const handleCreateNotif = async () => {
+    console.log("One ");
+    console.log("Header: ", messageHeader);
+    console.log("Body: ", messageBody);
+    if(checkIsProfanityAndAlert(messageHeader) || checkIsProfanityAndAlert(messageBody)) {
+      console.log("Two ");
+      return;
+    }
+    console.log("Three ");
     try {
       await createNotification({
         admin_name: `${userInfo.first_name} ${userInfo.last_name}`,
@@ -549,6 +557,13 @@ export default function MyLeagues() {
       }
       return;
     }
+
+    if(checkIsProfanityAndAlert(newLeague.league_name) 
+      || checkIsProfanityAndAlert(newLeague.description) 
+      || checkIsProfanityAndAlert(newLeague.password)) {
+        return;
+    }
+
     try {
       await createLeague(newLeague);
       

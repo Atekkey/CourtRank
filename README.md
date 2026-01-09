@@ -24,6 +24,8 @@ $ npx expo start
 
 ## Adds
 npm install lucide-react
+npm install bad-words
+
 
 # Deploy: 
 npx expo export --platform web
