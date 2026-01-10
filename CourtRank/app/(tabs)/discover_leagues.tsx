@@ -451,7 +451,7 @@ export default function DiscoverLeagues() {
             <View style={styles.leagueInfoContainer}>
               <View style={styles.leagueMainInfo}>
                 <Text style={styles.leagueName}>{league.league_name}{<TouchableOpacity style={styles.flagRed} onPress={() => {setCurLeague(league); setShowReportModal(true); }}>
-                  <Flag size={16}/>
+                  <Flag size={16} color="#ff0000"/>
                 </TouchableOpacity>}</Text>
                 
                 {league.description ? (<Text style={styles.leagueDescription}>{league.description}</Text>) : null}
@@ -502,7 +502,7 @@ export default function DiscoverLeagues() {
 
 const styles = StyleSheet.create({
   flagRed: {
-    color: 'red',
+    color: '0xff0000',
     padding: 5,
   },
   textArea: {
