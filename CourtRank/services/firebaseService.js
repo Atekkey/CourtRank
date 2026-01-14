@@ -456,6 +456,38 @@ export const removeLeagueEndDate = async (leagueId) => {
   return await updateLeagueEndDate(leagueId, null);
 };
 
+// Update League Info (name, description, location)
+export const updateLeagueInfo = async (leagueId, updates) => {
+  try {
+    if (!leagueId) {
+      console.error('League ID is required');
+      return false;
+    }
+
+    const leagueRef = doc(db, 'leagues', leagueId);
+
+    const leagueSnap = await getDoc(leagueRef);
+    if (!leagueSnap.exists()) {
+      console.error('League not found');
+      return false;
+    }
+
+    // Only update fields that are provided
+    const updateData = { updated_at: new Date() };
+    if (updates.league_name !== undefined) updateData.league_name = updates.league_name;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.location !== undefined) updateData.location = updates.location;
+
+    await updateDoc(leagueRef, updateData);
+
+    console.log('League info updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating league info:', error);
+    return false;
+  }
+};
+
 // Update User
 export const updateUserNames = async (userId, first, last) => {
   if (checkIsProfanityAndAlert(first) || checkIsProfanityAndAlert(last)) {
