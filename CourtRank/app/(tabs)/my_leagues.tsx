@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
-import { X, Calendar, Flag, RotateCcw } from 'lucide-react-native';
+import { X, Calendar, Flag, RotateCcw, Pencil } from 'lucide-react-native';
 import { myPrint, checkIsProfanityAndAlert, confirmAction } from '../helpers';
 
 // Rollback
@@ -1260,11 +1260,13 @@ export default function MyLeagues() {
               }}>
               <Text style={styles.leagueEndText}>📅 {league.league_end_date ? (formatDateToMMDDYYYY(league.league_end_date)) : "TBD"}</Text>
             </TouchableOpacity>
-          }
+            }
             <Text style={styles.leagueInfo}>
               👥 {league.players.length}{!isSmallScreen && " Competitors"}
             </Text>
-            {!isSmallScreen && <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>}
+            {!isSmallScreen && 
+              <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
+            }
           </View>
 
           {!isSmallScreen && 
