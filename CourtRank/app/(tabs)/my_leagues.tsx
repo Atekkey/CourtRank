@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList, Linking, Dimensions, useWindowDimensions } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, updateLeagueEndDate } from '../../services/firebaseService';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, updateLeagueEndDate, updateLeagueInfo } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
@@ -74,6 +74,11 @@ export default function MyLeagues() {
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Admin Settings
+  const [showAdminSettingsModal, setShowAdminSettingsModal] = useState(false);
+  const [editLeagueName, setEditLeagueName] = useState('');
+  const [editLeagueDescription, setEditLeagueDescription] = useState('');
+  const [editLeagueLocation, setEditLeagueLocation] = useState('');
   // Leaderboard
   const [eloNotScore, setEloNotScore] = useState(true);
 
@@ -1233,6 +1238,150 @@ export default function MyLeagues() {
       </Modal>
   );
 
+  // ADMIN SETTINGS MODAL
+  const adminSettingsClicked = (league) => {
+    setCurLeague(league);
+    setEditLeagueName(league.league_name || '');
+    setEditLeagueDescription(league.description || '');
+    setEditLeagueLocation(league.location || '');
+    setShowAdminSettingsModal(true);
+  };
+
+  const handleCancelAdminSettings = () => {
+    setShowAdminSettingsModal(false);
+    setEditLeagueName('');
+    setEditLeagueDescription('');
+    setEditLeagueLocation('');
+  };
+
+  const handleSaveAdminSettings = async () => {
+    if (!editLeagueName.trim()) {
+      myPrint('League name is required', 'Error');
+      return;
+    }
+
+    if (checkIsProfanityAndAlert(editLeagueName) ||
+        checkIsProfanityAndAlert(editLeagueDescription) ||
+        checkIsProfanityAndAlert(editLeagueLocation)) {
+      return;
+    }
+
+    try {
+      const success = await updateLeagueInfo(curLeague?.league_id, {
+        league_name: editLeagueName.trim(),
+        description: editLeagueDescription.trim(),
+        location: editLeagueLocation.trim(),
+      });
+
+      if (success) {
+        if (Platform.OS === 'web') {
+          window.alert('League settings updated successfully!');
+        } else {
+          Alert.alert('Success', 'League settings updated successfully!');
+        }
+        handleCancelAdminSettings();
+        handleRefresh();
+      } else {
+        myPrint('Failed to update league settings', 'Error');
+      }
+    } catch (error) {
+      myPrint('Error updating league settings', 'Error');
+    }
+  };
+
+  const handleSendNotifFromAdmin = () => {
+    setShowAdminSettingsModal(false);
+    notifClicked(curLeague);
+  };
+
+  const adminSettingsModal = (
+    <Modal
+      visible={showAdminSettingsModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleCancelAdminSettings}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeaderAdminSettings}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pencil color="white" size={24} style={{ marginRight: 10 }} />
+            <Text style={styles.modalTitle}>Admin Settings</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleCancelAdminSettings}
+          >
+            <X color="white" size={24} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          {/* League Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>League Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editLeagueName}
+              onChangeText={setEditLeagueName}
+              placeholder="Enter league name"
+              maxLength={50}
+            />
+          </View>
+
+          {/* Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Description</Text>
+            <TextInput
+              style={[styles.textInput, styles.textArea]}
+              value={editLeagueDescription}
+              onChangeText={setEditLeagueDescription}
+              placeholder="Enter league description (optional)"
+              multiline
+              numberOfLines={2}
+              maxLength={100}
+            />
+          </View>
+
+          {/* Location */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Location</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editLeagueLocation}
+              onChangeText={setEditLeagueLocation}
+              placeholder="Example: UIUC Tennis Courts (optional)"
+              maxLength={100}
+            />
+          </View>
+
+          {/* Send Notification Button */}
+          <TouchableOpacity
+            style={styles.sendNotifButton}
+            onPress={handleSendNotifFromAdmin}
+          >
+            <Text style={styles.sendNotifButtonText}>Send Notification</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelAdminSettings}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleSaveAdminSettings}
+          >
+            <Text style={styles.createButtonText}>Save Edits</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // LEAGUE CARDS - Unified function for both active and expired leagues
   const renderLeagueCard = (league, isExpired: boolean) => {
     const stats = league?.elo_info[user?.uid];
@@ -1336,15 +1485,23 @@ export default function MyLeagues() {
 
           { user?.uid === league?.admin_pid ?
           (<TouchableOpacity
-            style={styles.notifButton}
-            onPress={() => notifClicked(league)}
+            style={styles.adminSettings}
+            onPress={() => adminSettingsClicked(league)}
           >
-            {Platform.OS == "web" && window.innerWidth >= 800 ?
-            <Text style={styles.leaveButtonText}>Send Notification</Text>
-            :
-            <Text style={styles.leaveButtonText}>Notify Users</Text>
-          }
+            
+            <Text style={styles.leaveButtonText}>
+              Admin Settings
+            </Text>
           </TouchableOpacity>)
+          
+          // <TouchableOpacity
+          //   style={styles.adminSettingsButton}
+          //   onPress={() => adminSettingsClicked(league)}
+          // >
+          //   <Pencil size={16} color="white" style={{ marginRight: 6 }} />
+          //   <Text style={styles.adminSettingsButtonText}>Admin Settings</Text>
+          // </TouchableOpacity>
+          
           :
           (<TouchableOpacity
             style={styles.leaveButton}
@@ -1354,6 +1511,7 @@ export default function MyLeagues() {
           </TouchableOpacity>)
           }
         </View>
+
 
         {/* Log Game Button - only for active leagues */}
         {!isExpired && (
@@ -1468,6 +1626,7 @@ export default function MyLeagues() {
       {reportModal}
       {matchHistoryModal}
       {dateModal}
+      {adminSettingsModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -1967,6 +2126,38 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
   },
+  adminSettings: {
+    backgroundColor: '#555',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+  },
+  adminSettingsButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  adminSettingsPlaceholder: {
+    fontSize: 16,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 40,
+  },
+  sendNotifButton: {
+    backgroundColor: '#8536f4ff',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  sendNotifButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   leaveButtonText: {
     color: 'white',
     fontSize: 16,
@@ -2010,6 +2201,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#737373',
+  },
+  modalHeaderAdminSettings: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#555',
   },
   modalTitleNotWeb: {
     fontSize: 15,
