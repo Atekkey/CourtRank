@@ -84,7 +84,7 @@ export default function MyLeagues() {
 
   // Screen width - for responsive layout
   const { width: screenWidth } = useWindowDimensions();
-  const isSmallScreen = screenWidth < 500;
+  const isSmallScreen = screenWidth < 520;
 
 
   useEffect(() => {
@@ -885,7 +885,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={(Platform.OS == "web" && window.innerWidth >= 800) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(isSmallScreen) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -1473,14 +1473,11 @@ export default function MyLeagues() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
-            <Text style={styles.viewButtonText}>Match History</Text>
+            <Text style={styles.viewButtonText}>Match{isSmallScreen ? "\n" : " "}History</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-            {Platform.OS == "web" && window.innerWidth >= 800 ?
-              <Text style={styles.viewButtonText}>Leaderboard</Text>
-            : <Text style={styles.viewButtonText}>Leader-board</Text>
-            }
+            <Text style={styles.viewButtonText}>Leader{isSmallScreen ? "\n" : ""}board</Text>
           </TouchableOpacity>
 
           { user?.uid === league?.admin_pid ?
