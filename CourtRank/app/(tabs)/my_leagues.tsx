@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useMatches } from '@/hooks/useMatches';
 
 
 export default function MyLeagues() {
@@ -52,6 +53,8 @@ export default function MyLeagues() {
   // Leaderboard
   const [eloNotScore, setEloNotScore] = useState(true);
 
+  const {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches, startOfMatches} = useMatches();
+
 
   useEffect(() => {
     // Fetch user's leagues from backend
@@ -60,16 +63,24 @@ export default function MyLeagues() {
       try {
         console.log("[my_leagues]: user id useEffect, fetching user leagues");
         const leagues = await getUserLeagues(user?.uid);
+        console.log("[my_leagues]: fetched leagues: ", leagues);
+
+        // Initialize useMatches hook with user leagueIDs
+        startUseMatches(leagues.map(l => l.league_id));
         setMyLeagues(leagues);
       } catch (error) {
         console.error('Error fetching my leagues:', error);
+      } finally {
+        
+        setLoading(false);
       }
     };
-    fetchAllMatchHistory();
+    // fetchAllMatchHistory();
     fetchMyLeagues();
-    setLoading(false);
+    
   }, [user?.uid]);
 
+  // @TODO: Make sure to update this funciton with useMatches hook as well
   const handleRefresh = async () => {
     setLoading(true);
     try {
@@ -911,6 +922,8 @@ export default function MyLeagues() {
   };
 
   const fetchAllMatchHistory = async () => {
+
+    // implement useMatches hook
     try {
       console.log("[my_leagues]: Fetching all match history, await getAllMatches");
       const matches = await getAllMatches();

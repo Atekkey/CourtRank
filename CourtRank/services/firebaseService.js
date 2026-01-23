@@ -27,12 +27,20 @@ import { use, useRef, useState } from 'react';
 
 // Sign in with Google
 
+const isTestEnv = process.env.NODE_ENV === "test";
+
 // *NOTE: These env variables will not process on web, only through expo
-const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = Constants.expoConfig.extra;
+
+// This is only required to test "useMatchesEmulated.test.js" in test env
+const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = isTestEnv ? 
+  {WEB_CLIENT_ID: "FAKE_WEB_CLIENT_ID", IOS_CLIENT_ID: "FAKE_IOS_CLIENT_ID", ANDROID_CLIENT_ID: "FAKE_ANDROID_CLIENT_ID"} 
+  : Constants.expoConfig.extra;
+
+// const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = Constants.expoConfig.extra;
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectUri = makeRedirectUri({
+const redirectUri = isTestEnv ? "TestRedirectUri" :  makeRedirectUri({
   scheme: 'courtrank',
   path: 'redirect'
 });

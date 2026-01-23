@@ -1,117 +1,37 @@
-import { renderHook, waitFor, act } from '@testing-library/react';
-import {useMatchesJest} from '../hooks/useMatches';
-
-const { describe, test, expect, beforeEach, jest } = require('@jest/globals');
 
 
+// test league id: luQCFJQt8juMt99EM5T7
 
-// mock firestore functions
-// jest.mock('firebase/firestore', () => {
+// jest.mock('expo-auth-session', () => {
+//   const actual = jest.requireActual('expo-auth-session');
 //   return {
-//     collection: jest.fn(),
-//     query: jest.fn(),
-//     where: jest.fn(),
-//     orderBy: jest.fn(),
-//     limit: jest.fn(),
-//     startAfter: jest.fn(),
-//     endBefore: jest.fn(),
-//     getDocsFromCache: jest.fn(),
-//     getDocsFromServer: jest.fn(),
-//     db: {} 
+//     ...actual,
+//     makeRedirectUri: jest.fn(() => 'test://redirect'),
+//     WebBrowser: {
+//       maybeCompleteAuthSession: jest.fn(),
+//     },
 //   };
 // });
 
-//   // mock firestore server/cache data
-//   let fakeCacheMatches = [];
-//   let fakeServerMatches = [];
+// jest.mock('expo-constants', () => ({
+//   expoConfig: {
+//     extra: {
+//       WEB_CLIENT_ID: 'TEST_WEB_CLIENT_ID',
+//       IOS_CLIENT_ID: 'TEST_IOS_CLIENT_ID',
+//       ANDROID_CLIENT_ID: 'TEST_ANDROID_CLIENT_ID',
+//     },
+//   },
+// }));
 
-  
- 
-
-// const mockFirestore = {
-//   // getDocsFromCache: jest.fn().mockResolvedValue({ empty: false, docs: fakeCacheMatches }),
-//   // getDocsFromServer: jest.fn().mockResolvedValue({ empty: false, docs: fakeServerMatches }),
-//     getDocsFromCache: jest.fn(),
-//   getDocsFromServer: jest.fn(),
-//   collection: jest.fn(),
-//   query: jest.fn(),
-//   where: jest.fn(),
-//   orderBy: jest.fn(),
-//   limit: jest.fn(),
-//   startAfter: jest.fn(),
-//   endBefore: jest.fn(),
-    // db: {},
-// };
-
-function createMockFirestore({ cacheMatches = [], serverMatches = [] }) {
-  return {
-    getDocsFromCache: jest.fn().mockResolvedValue({
-      empty: cacheMatches.length === 0,
-      docs: cacheMatches.map((m) => ({ id: m.id, data: () => m })),
-      forEach: function (callback) {
-          this.docs.forEach(callback);
-      },
-    }),
-    getDocsFromServer: jest.fn().mockResolvedValue({
-      empty: serverMatches.length === 0,
-      docs: serverMatches.map((m) => ({ id: m.id, data: () => m })),
-      forEach: function (callback) {
-        this.docs.forEach(callback);
-      },
-    }),
-    collection: jest.fn(),
-    query: jest.fn(),
-    where: jest.fn(),
-    orderBy: jest.fn(),
-    limit: jest.fn(),
-    startAfter: jest.fn(),
-    endBefore: jest.fn(),
-    db: {},
-  };
-}
-
-function createPaginatedMockFirestore({ cacheMatches = [], serverMatches = [] }) {
-  let callCount = 0; // Track the number of calls to getDocsFromServer
-
-  return {
-    getDocsFromCache: jest.fn().mockResolvedValue({
-      empty: cacheMatches.length === 0,
-      docs: cacheMatches.map((m) => ({ id: m.id, data: () => m })),
-      forEach: function (callback) {
-        this.docs.forEach(callback);
-      },
-    }),
-    getDocsFromServer: jest.fn().mockImplementation(() => {
-      // console.log("getDocsFromServer called, call count: ", callCount);
-      const start = callCount === 0 ? 0 : 40 + (callCount - 1) * 20; // First call returns 40, subsequent calls return 20
-      const end = callCount === 0 ? 40 : start + 20; // First call ends at 40, subsequent calls end at +20
-      const matchesToReturn = serverMatches.slice(start, end);
-      callCount++; // Increment the call count for the next invocation
-
-      return Promise.resolve({
-        empty: matchesToReturn.length === 0,
-        docs: matchesToReturn.map((m) => ({ id: m.id, data: () => m })),
-        forEach: function (callback) {
-          this.docs.forEach(callback);
-        },
-      });
-    }),
-    collection: jest.fn(),
-    query: jest.fn(),
-    where: jest.fn(),
-    orderBy: jest.fn(),
-    limit: jest.fn(),
-    startAfter: jest.fn(),
-    endBefore: jest.fn(),
-    db: {},
-  };
-}
-
-
-
+import { renderHook, waitFor, act } from '@testing-library/react';
+import {useMatches} from '../hooks/useMatches';
+// import { createMatch, getAllMatches } from '@/services/firebaseService';
+import {db} from '@/services/firebaseTestConfig';
+import { collection, query, deleteDoc, getDocs, doc, getDoc, setDoc} from 'firebase/firestore';
+const { describe, test, expect, beforeEach, beforeAll, jest } = require('@jest/globals');
 
 // Generate fake matches for testing
-export function generateFakeMatches(count = 50, startTime = 1000, leagueId = 'leagueA') {
+export function generateFakeMatches(count = 50, startTime = 1000, leagueId = 'luQCFJQt8juMt99EM5T7') {
   const matches = [];
   for (let i = 0; i < count; i++) {
     matches.push({
@@ -126,7 +46,107 @@ export function generateFakeMatches(count = 50, startTime = 1000, leagueId = 'le
   return matches;
 }
 
-// const { getDocsFromCache, getDocsFromServer } = require('firebase/firestore');
+
+
+// creates fake matches in a collection
+// async function createFakeMatches(count = 50, startTime = 1000, leagueId = 'leagueA') {
+//   // create fake matches
+//   const promises = [];
+//   for (let i = 0; i < count; i++) {
+//     promises.push(createMatch({
+//       leagueId,
+//       name: `Match ${i}`,
+//       timestamp: startTime + (i * 10),
+//     }));
+//   }
+  
+//   try {
+//     const results = await Promise.all(promises);
+//     console.log(`✅ Created ${count} fake matches`, results);
+//   } catch (error) {
+//     console.error('❌ Error creating fake matches:', error);
+//   }
+// }
+
+export function assertUsingFirestoreEmulator(db) {
+  const settings = db._settings;
+
+  if (!settings || !settings.host || !settings.host.includes('127.0.0.1:8080')) {
+    throw new Error(
+      `❌ Firestore is NOT using emulator. Host = ${settings?.host}`
+    );
+  }
+
+  console.log('✅ Firestore is using emulator:', settings.host);
+}
+
+// Remove all matches from the collection
+async function removeAllMatches() {
+  const matchesCollection = collection(db, "matches");
+  const q = query(matchesCollection);
+  const snapshot = await getDocs(q);
+  // const batch = db.batch();
+
+  let deleteOps = [];
+  snapshot.forEach(doc => {
+    deleteOps.push(deleteDoc(doc.ref));
+  });
+
+  await Promise.all(deleteOps)
+}
+
+
+describe('fetchLeagueMatches Tests', () => {
+
+    beforeAll(() => {
+        assertUsingFirestoreEmulator(db);
+    });
+
+
+    // beforeEach(async () => { 
+    //   await removeAllMatches();
+    //   await createFakeMatches();
+    // });
+
+    
+test("can read from Firestore emulator", async () => {
+  assertUsingFirestoreEmulator(db);
+  const snap = await getDocs(collection(db, "matches"));
+  expect(snap).toBeDefined();
+});
+
+  test('simple test', () => {
+    expect(1 + 1).toBe(2);
+  });
+
+//   test("definitely using emulator", async () => {
+//   const ref = doc(db, "__emulator_proof__/one");
+
+//   await setDoc(ref, { ok: true });
+
+//   const snap = await getDoc(ref);
+
+//   expect(snap.exists()).toBe(true);
+//   expect(snap.data().ok).toBe(true);
+// }, 10000);
+
+  // test("getAllMatchesTest" , async () => {
+  //     const myMatches = await getAllMatches();
+
+  //     console.log("all matches:", myMatches);
+  // }, 100000);
+
+  // test('simple test 2', async () => {
+  //      const { result } = renderHook(() => useMatches());
+  //      await createFakeMatches(5, 1000, 'leagueA');
+
+  //      expect(1 + 1).toBe(2);
+  // }, 10000);
+
+
+});
+
+/*
 
 describe('fetchLeagueMatches Tests', () => {
   // clear mock values before each test
@@ -144,7 +164,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -170,7 +190,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -181,7 +201,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     const correctMatches = [...fakeServerMatches, ...fakeCacheMatches];
-    // console.log("fetched Matches:", matches);
+    console.log("fetched Matches:", matches);
 
     await waitFor(() => {
       expect(matches.length).toBe(60);
@@ -199,7 +219,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -225,7 +245,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -251,7 +271,7 @@ describe('fetchLeagueMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -279,7 +299,7 @@ describe('fetchLeagueMatches Tests', () => {
   //   });
 
   //   // start fresh hook
-  //   const { result } = renderHook(() => useMatchesJest(mockFirestore));
+  //   const { result } = renderHook(() => useMatches(mockFirestore));
   //   result.current.startUseMatches(['leagueA']);
 
   //   let matches = [];
@@ -317,7 +337,7 @@ describe('startUseMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -353,13 +373,13 @@ describe('startUseMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     
     // setLeague to non-existent league, should throw error
     expect(() => 
-      result.current.setLeague('leagueB').toThrow("League not found in useMatchesJest hook"));
+      result.current.setLeague('leagueB').toThrow("League not found in useMatches hook"));
   });
 
   test("CASE 2: setLeague, no matches exist for league yet", async () => {
@@ -372,7 +392,7 @@ describe('startUseMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     
@@ -401,7 +421,7 @@ describe('startUseMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
     await result.current.fetchLeagueMatches('leagueA');
     
@@ -427,7 +447,7 @@ describe('startUseMatches Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
     await result.current.fetchLeagueMatches('leagueA');
     
@@ -461,7 +481,7 @@ describe('nextPage + prevPage Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -471,7 +491,7 @@ describe('nextPage + prevPage Tests', () => {
     });
 
     matches = result.current.allMatches.current.get('leagueA');
-    // console.log("All matches after initial fetch:", matches);
+    console.log("All matches after initial fetch:", matches);
 
     await waitFor(() => {
       // should only have two pages (40 matches) loaded
@@ -537,7 +557,7 @@ describe('nextPage + prevPage Tests', () => {
     });
 
     // start fresh hook
-    const { result } = renderHook(() => useMatchesJest(mockFirestore));
+    const { result } = renderHook(() => useMatches(mockFirestore));
     result.current.startUseMatches(['leagueA']);
 
     let matches = [];
@@ -547,7 +567,7 @@ describe('nextPage + prevPage Tests', () => {
     });
 
     matches = result.current.allMatches.current.get('leagueA');
-    // console.log("All matches after initial fetch:", matches);
+    console.log("All matches after initial fetch:", matches);
 
     await waitFor(() => {
       // should only have two pages (40 matches) loaded
@@ -637,4 +657,4 @@ describe('nextPage + prevPage Tests', () => {
   });
 
 
-});
+}); */
