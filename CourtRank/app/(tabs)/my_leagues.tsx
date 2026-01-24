@@ -86,8 +86,11 @@ export default function MyLeagues() {
     try {
       console.log("[my_leagues]: handleRefresh, fetching user leagues");
       const leagues = await getUserLeagues(user?.uid);
+
+      // Initialize useMatches hook with user leagueIDs
+      startUseMatches(leagues.map(l => l.league_id));
       setMyLeagues(leagues);
-      fetchAllMatchHistory();
+      // fetchAllMatchHistory();
     } catch (error) {
       console.error('Error fetching my leagues:', error);
     }
@@ -917,7 +920,8 @@ export default function MyLeagues() {
 
   // Match FXNs
   const matchPressed = (league) => {
-    setCurLeague(league);
+    // setCurLeague(league);
+    setLeague(league.league_id); // useMatches hook
     setShowMatchModal(true);
   };
 
@@ -938,9 +942,10 @@ export default function MyLeagues() {
     ).sort((a,b) => b.length - a.length);
     return playerNames;
   };
-  
-  const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
-    if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
+
+  // new matchMap using useMatches hook and matches window
+  const matchMap = (matchesWindow.length > 0) ? ((matchesWindow).map(matchInfo => {
+    // if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
@@ -977,6 +982,48 @@ export default function MyLeagues() {
       </View> 
     );
   })) : null;
+
+  // Old matchMap using all matchHistory 
+  /*
+  const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
+    if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
+    const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    return (
+      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+
+        
+        
+          <View style={[styles_match.card, styles_match.winnerCard]}>
+           
+
+            {getMatchPlayers(matchInfo.win_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+        
+
+          <View style={[styles_match.card, styles_match.dateCard]}>
+            <Text style={styles_match.matchDate}>{date}</Text>
+            <Text style={styles_match.vsText}>vs</Text>
+          </View>
+
+          <View style={[styles_match.card, styles_match.loserCard]}>
+
+              {getMatchPlayers(matchInfo.loss_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+
+    
+
+      </View> 
+    );
+  })) : null;
+  */
 
   const matchHistoryModal = (
     <Modal

@@ -1,6 +1,6 @@
 // useMatches hook
 import { useState, useRef } from 'react';
-import { collection, query, where, orderBy, limit, startAfter, endBefore, getDocsFromCache, getDocsFromServer } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, startAfter, endBefore, getDocsFromCache, getDocsFromServer, documentId } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
 
 
@@ -45,6 +45,7 @@ export function useMatches() {
   }
 
   async function setLeague(leagueID) {
+    console.log("useMatches: setting league to ", leagueID);
     // sets currLeague, fetches matches if not already fetched
     try {
       if (!allMatches.current.has(leagueID)) {
@@ -77,6 +78,7 @@ export function useMatches() {
       }
       // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
       
+      console.log("useMatches: league set with window size ", matchesWindow.length);
 
     } catch (error) {
       throw error;
@@ -88,13 +90,14 @@ export function useMatches() {
 
   // fetch first 40 matches for a single leagueID, checking cache first
   async function fetchLeagueMatches(leagueID) {
+    console.log("useMatches: fetching matches for league ", leagueID);
     // const { collection, query, getDocsFromCache, getDocsFromServer, where, orderBy, db, limit, endBefore, startAfter } = await import('firebase/firestore');
     try {
       const cacheQ = query(
         collection(db, 'matches'),
         where('league_id', '==', leagueID),
         orderBy('timestamp', 'desc'),
-        orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
+        orderBy(documentId(), 'desc'), // ordering by documentId also to ensure deterministic ordering in case of equal timestamps
       );
       const matches = [];
 
@@ -110,7 +113,7 @@ export function useMatches() {
           collection(db, 'matches'),
           where('league_id', '==', leagueID),
           orderBy('timestamp', 'desc'),
-          orderBy('league_id', 'desc'),
+          orderBy(documentId(), 'desc'),
           limit(pageSize.current * 2)
         );
         const serverSnapshot = await getDocsFromServer(serverQ);
@@ -133,7 +136,7 @@ export function useMatches() {
         collection(db, 'matches'),
         where('league_id', '==', leagueID),
         orderBy('timestamp', 'desc'),
-        orderBy('league_id', 'desc'),
+        orderBy(documentId(), 'desc'),
         endBefore(cacheSnapshot.docs[0]),
         limit(pageSize.current * 2) // also use limit in case of large gap between cache and server to prevent excessive reads
       );
@@ -172,7 +175,7 @@ export function useMatches() {
           collection(db, 'matches'),
           where('league_id', '==', leagueID),
           orderBy('timestamp', 'desc'),
-          orderBy('league_id', 'desc'),
+          orderBy(documentId(), 'desc'),
           startAfter(cacheSnapshot.docs[cacheSnapshot.docs.length - 1]),
           limit((pageSize.current * 2) - matches.length)
         );
@@ -238,7 +241,7 @@ export function useMatches() {
             collection(db, 'matches'),
             where('league_id', '==', currLeague.current),
             orderBy('timestamp', 'desc'),
-            orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
+            orderBy(documentId(), 'desc'), // ordering by documentID also to ensure deterministic ordering in case of equal timestamps
             startAfter(matches[matches.length - 1].timestamp, matches[matches.length - 1].league_id),
             limit(pageSize.current)
           );
