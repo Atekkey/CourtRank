@@ -12,7 +12,7 @@ export function useMatches() {
 
   // page index (to get window)
   const page = useRef(0);
-  const pageSize = useRef(2);
+  const pageSize = useRef(20);
 
   // Map<leagueID, matches[]> allMatches
   const allMatches = useRef(new Map());
