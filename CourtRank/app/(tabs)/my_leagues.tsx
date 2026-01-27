@@ -949,7 +949,7 @@ export default function MyLeagues() {
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
-
+<Text style={styles_match.matchDate}>ID: {matchInfo.id}</Text>
         
         
           <View style={[styles_match.card, styles_match.winnerCard]}>
@@ -966,6 +966,7 @@ export default function MyLeagues() {
           <View style={[styles_match.card, styles_match.dateCard]}>
             <Text style={styles_match.matchDate}>{date}</Text>
             <Text style={styles_match.vsText}>vs</Text>
+            
           </View>
 
           <View style={[styles_match.card, styles_match.loserCard]}>
@@ -1025,6 +1026,18 @@ export default function MyLeagues() {
   })) : null;
   */
 
+  async function onNextPage() {
+    setLoading(true);
+    nextPage();
+    setLoading(false);
+  }
+
+  async function onPrevPage() {
+    setLoading(true);
+    prevPage();
+    setLoading(false);
+  }
+
   const matchHistoryModal = (
     <Modal
         visible={showMatchModal}
@@ -1040,6 +1053,17 @@ export default function MyLeagues() {
               onPress={() => setShowMatchModal(false)}
             >
               <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {/* page buttons */}
+          <View style={styles.pageButtonContainer}>
+            <TouchableOpacity style={[styles.pageButton, startOfMatches && styles.buttonDisabled, loading && styles.buttonLoading]}
+            onPress={() => (startOfMatches || loading) ? null : onPrevPage()}>
+              <Text>Prev</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.pageButton, endOfMatches && styles.buttonDisabled, loading && styles.buttonLoading]}
+            onPress={() => (endOfMatches || loading) ? null : onNextPage()}>
+              <Text>Next</Text>
             </TouchableOpacity>
           </View>
 
@@ -1872,6 +1896,22 @@ const styles = StyleSheet.create({
   selectedRow: {
     backgroundColor: '#d0f0d0', 
   },
+  pageButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+  },
+  pageButton: {
+    backgroundColor: '#8E24AA',
+    padding: 10,
+  },
+  buttonLoading: {
+    backgroundColor: '#986da3',
+  },
+  buttonDisabled: {
+    backgroundColor: '#cccccc',
+  },
+
 });
 
 const styles_match = StyleSheet.create({

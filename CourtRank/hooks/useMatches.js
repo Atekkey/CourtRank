@@ -1,17 +1,18 @@
 // useMatches hook
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, startAfter, endBefore, getDocsFromCache, getDocsFromServer, documentId } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
 
 
 export function useMatches() {
+  console.log("useMatches hook initialized");
  
   // stateHooks:
   const [matchesWindow, setMatchesWindow] = useState([]);
 
   // page index (to get window)
   const page = useRef(0);
-  const pageSize = useRef(20);
+  const pageSize = useRef(2);
 
   // Map<leagueID, matches[]> allMatches
   const allMatches = useRef(new Map());
@@ -20,8 +21,73 @@ export function useMatches() {
   const currLeague = useRef(null);
 
   // !! Maybe have boolean value telling if reached end of matches for currLeague (so no more next page)
+  // const [endOfMatches, setEndOfMatches] = useState(false);
+  // const [startOfMatches, setStartOfMatches] = useState(true);
+
+  // useRef + useState combo to have both mutable ref and state trigger
   const endOfMatches = useRef(false);
+  const [endOfMatchesState, setEndOfMatchesState] = useState(false);
+
   const startOfMatches = useRef(true);
+  const [startOfMatchesState, setStartOfMatchesState] = useState(true);
+
+  const toggleEndofMatches = (value) => {
+    endOfMatches.current = value;
+    setEndOfMatchesState(value);
+  };
+
+  const toggleStartOfMatches = (value) => {
+    startOfMatches.current = value;
+    setStartOfMatchesState(value);
+  }
+
+
+// !!! THOUGHTS
+// If duplicates are within the same page, something weird is happening
+// but if they are between pages, it is an issue with firebase pagination and startAfter queries
+  const checkForDupeIDs = () => {
+    const matches = allMatches.current.get(currLeague.current);
+    if (!matches || matches.length === 0) {
+      return { hasDuplicates: false, duplicateIds: [] };
+    }
+
+    const ids = matches.map(match => match.id);
+    const idSet = new Set(ids);
+
+    // console.log("useMatches: allIds: ", ids);
+
+    // If set size is less than array size, there are duplicates
+    if (idSet.size < ids.length) {
+      // Find which IDs are duplicated
+      const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+      const uniqueDuplicateIds = [...new Set(duplicateIds)];
+      
+      // Log the match data for each duplicate ID
+      uniqueDuplicateIds.forEach(dupeId => {
+        const dupeMatches = matches.filter(match => match.id === dupeId);
+        console.warn(`useMatches: Duplicate ID "${dupeId}" found in ${dupeMatches.length} matches:`, dupeMatches);
+      });
+      
+      return { hasDuplicates: true, duplicateIds: uniqueDuplicateIds };
+    }
+
+    return { hasDuplicates: false, duplicateIds: [] };
+  }
+
+  useEffect(() => {
+    console.log("useMatches: endOfMatches changed to ", endOfMatches.current, endOfMatchesState);
+  }, [endOfMatchesState]);
+
+  useEffect(() => {
+    console.log("useMatches: startOfMatches changed to ", startOfMatches.current, startOfMatchesState);
+  }, [startOfMatchesState]);
+
+  useEffect(() => {
+    const result = checkForDupeIDs();
+    if (result.hasDuplicates) {
+      console.warn("useMatches: Duplicate match IDs detected:", result.duplicateIds);
+    }
+  }, [matchesWindow]);
 
   // funcs:
   //  fetchMatches (Ids[]) (fetches matches given league array)
@@ -34,6 +100,13 @@ export function useMatches() {
     // need to clear all vars using useRef first to eliminate stale data
     allMatches.current = new Map();
     page.current = 0;
+    // setEndOfMatches(false);
+    // setStartOfMatches(true);
+    toggleEndofMatches(false);
+    toggleStartOfMatches(true);
+    
+    // endOfMatches.current = false;
+    // startOfMatches.current = true;
 
 
     for (const leagueID of leagueIDs) {
@@ -64,16 +137,27 @@ export function useMatches() {
       // set page to 0
       page.current = 0;
 
-      startOfMatches.current = true;
+      // startOfMatches.current = true;
+      toggleStartOfMatches(true);
+      // setStartOfMatches(true);
+
+      
 
 
       // set matchesWindow to first page of matches
       // uses current page and page size to calculate window 
       if (matches.length <= pageSize.current) {
         // if less than one page of matches, set endOfMatches to true
-        endOfMatches.current = true;
+        console.log("useMatches: less than one page of matches, setting endOfMatches to true");
+        // endOfMatches.current = true;
+        toggleEndofMatches(true);
+        // setEndOfMatches(true);
         setMatchesWindow(matches.slice(0, matches.length));
       } else {
+        console.log("useMatches: setting matches window to first page");
+        // endOfMatches.current = false;
+        toggleEndofMatches(false);
+        // setEndOfMatches(false);
         setMatchesWindow(matches.slice(0, pageSize.current));
       }
       // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
@@ -224,25 +308,31 @@ export function useMatches() {
           // set matches window, using Math.min in case of < pageSize new matches
           setMatchesWindow(matches.slice(page.current * pageSize.current, 
             Math.min((page.current + 1) * pageSize.current), matches.length));
+            //!! maybe set endOfMatches to false here? just to prevent user from clicking fast and breaking
 
-          if (page.current > 0) {
-            startOfMatches.current = false;
+          if (page.current > 0) { // this might be redundant but is careful
+            toggleStartOfMatches(false);
+            // startOfMatches.current = false;
+            // setStartOfMatches(false);
           }
           
-
+          console.log("useMatches: moved to next page, current page ", page.current);
         }
 
         // only query if at end of matches array, so a backup page is needed
         const newWindowEnd = (page.current + 1) * pageSize.current;
 
+
         if (matches.length <= newWindowEnd) {
+                  console.log("useMatches: fetching next page from server...");
+          console.log("last match : " , matches[matches.length - 1]);
           // then query for next page of matches
           const q = query(
             collection(db, 'matches'),
             where('league_id', '==', currLeague.current),
             orderBy('timestamp', 'desc'),
             orderBy(documentId(), 'desc'), // ordering by documentID also to ensure deterministic ordering in case of equal timestamps
-            startAfter(matches[matches.length - 1].timestamp, matches[matches.length - 1].league_id),
+            startAfter(matches[matches.length - 1].timestamp),
             limit(pageSize.current)
           );
 
@@ -251,7 +341,13 @@ export function useMatches() {
 
           // if snaphot empty, this is end of matches
           if (querySnapshot.empty) {
-            endOfMatches.current = true;
+            console.log("useMatches, nextPage: reached end of matches from server");
+            toggleEndofMatches(true);
+            validateMapAgainstAllMatches(currLeague.current);
+            // endOfMatches.current = true;
+            // setEndOfMatches(true);
+
+            console.log("useMatches: endOfMatches = ", endOfMatches);
           }
 
 
@@ -286,7 +382,9 @@ export function useMatches() {
 
       if (endOfMatches.current) {
         // if at endOfMatches, then going back means we are no longer at end
-        endOfMatches.current = false;
+        toggleEndofMatches(false);
+        // endOfMatches.current = false;
+        // setEndOfMatches(false);
       }
 
       // set new window based on page number
@@ -294,7 +392,9 @@ export function useMatches() {
 
       // check if start of pages
       if (page.current < 1) {
-        startOfMatches.current = true;
+        toggleStartOfMatches(true);
+        // startOfMatches.current = true;
+        // setStartOfMatches(true);
       }
 
     } catch (error) {
@@ -302,7 +402,80 @@ export function useMatches() {
     }
   }
 
-  return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatches.current, startOfMatches: startOfMatches.current };
+  // Query all matches for a league and compare with map
+  async function validateMapAgainstAllMatches(leagueID) {
+    console.log("useMatches: validating map against all matches for league", leagueID);
+    
+    try {
+      if (!allMatches.current.has(leagueID)) {
+        throw new Error('League not found in useMatches hook');
+      }
+
+      // Query all matches for this league
+      const allMatchesQuery = query(
+        collection(db, 'matches'),
+        where('league_id', '==', leagueID),
+        orderBy('timestamp', 'desc'),
+        orderBy(documentId(), 'desc')
+      );
+
+      const allMatchesSnapshot = await getDocsFromServer(allMatchesQuery);
+      const allMatchesFromDB = [];
+
+      allMatchesSnapshot.forEach((doc) => {
+        allMatchesFromDB.push({ id: doc.id, ...doc.data() });
+      });
+
+      // Get matches from map
+      const mapMatches = allMatches.current.get(leagueID);
+
+      // Create sets of IDs for comparison
+      const dbIds = new Set(allMatchesFromDB.map(m => m.id));
+      const mapIds = new Set(mapMatches.map(m => m.id));
+
+      // Find differences
+      const missingFromMap = [...dbIds].filter(id => !mapIds.has(id));
+      const extraInMap = [...mapIds].filter(id => !dbIds.has(id));
+
+      // Log results
+      console.log(`useMatches: Validation Results for League ${leagueID}:`);
+      console.log(`  Total matches in DB: ${allMatchesFromDB.length}`);
+      console.log(`  Total matches in map: ${mapMatches.length}`);
+      console.log(`  Match count - ${dbIds.size === mapIds.size ? 'PASS' : 'FAIL'}`);
+
+      if (missingFromMap.length > 0) {
+        console.warn(`  Missing from map (${missingFromMap.length}):`, 
+          allMatchesFromDB.filter(m => missingFromMap.includes(m.id)));
+      } else {
+        console.log('  Missing from map: NONE');
+      }
+
+      if (extraInMap.length > 0) {
+        console.warn(`  Extra in map (${extraInMap.length}):`, 
+          mapMatches.filter(m => extraInMap.includes(m.id)));
+      } else {
+        console.log('  Extra in map: NONE');
+      }
+
+      const isValid = missingFromMap.length === 0 && extraInMap.length === 0;
+      console.log(`  Overall validation: ${isValid ? 'PASS' : 'FAIL'}`);
+
+      return {
+        isValid,
+        dbCount: allMatchesFromDB.length,
+        mapCount: mapMatches.length,
+        missingFromMap,
+        extraInMap,
+        allDBMatches: allMatchesFromDB
+      };
+
+    } catch (error) {
+      console.error("useMatches: Error validating map against all matches:", error);
+      throw error;
+    }
+  }
+
+  return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatchesState, startOfMatches: startOfMatchesState, validateMapAgainstAllMatches};
 
 }
 
@@ -366,6 +539,7 @@ export function useMatchesJest(mockFirestore) {
       page.current = 0;
 
       startOfMatches.current = true;
+      
 
 
       // set matchesWindow to first page of matches
@@ -375,6 +549,7 @@ export function useMatchesJest(mockFirestore) {
         endOfMatches.current = true;
         setMatchesWindow(matches.slice(0, matches.length));
       } else {
+        endOfMatches.current = false;
         setMatchesWindow(matches.slice(0, pageSize.current));
       }
       // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
@@ -530,12 +705,13 @@ export function useMatchesJest(mockFirestore) {
           page.current = page.current + 1;
 
           // set matches window, using Math.min in case of < pageSize new matches
-          setMatchesWindow(matches.slice(page.current * pageSize.current, 
+          await setMatchesWindow(matches.slice(page.current * pageSize.current, 
             Math.min((page.current + 1) * pageSize.current), matches.length));
 
-          if (page.current > 0) {
-            startOfMatches.current = false;
-          }
+          // if (page.current > 0) {
+          //   startOfMatches.current = false;
+          // }
+          startOfMatches.currrent = false;
           
 
         }
