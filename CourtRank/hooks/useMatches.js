@@ -357,6 +357,8 @@ export function useMatches() {
           });
           
           allMatches.current.set(currLeague.current, matches);
+          const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+          // await delay(3000); // small delay to ensure state updates
 
         }
       } else {

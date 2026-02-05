@@ -949,7 +949,7 @@ export default function MyLeagues() {
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
-<Text style={styles_match.matchDate}>ID: {matchInfo.id}</Text>
+{/* <Text style={styles_match.matchDate}>ID: {matchInfo.id}</Text> */}
         
         
           <View style={[styles_match.card, styles_match.winnerCard]}>
@@ -1028,13 +1028,13 @@ export default function MyLeagues() {
 
   async function onNextPage() {
     setLoading(true);
-    nextPage();
+    await nextPage();
     setLoading(false);
   }
 
   async function onPrevPage() {
     setLoading(true);
-    prevPage();
+    await prevPage();
     setLoading(false);
   }
 
@@ -1061,6 +1061,12 @@ export default function MyLeagues() {
             onPress={() => (startOfMatches || loading) ? null : onPrevPage()}>
               <Text>Prev</Text>
             </TouchableOpacity>
+            <Text style={styles.datePage}>
+              {matchesWindow.length > 0 ?
+                `${matchesWindow[0].timestamp.toDate().toLocaleDateString().slice(0,-5)} - ${matchesWindow[matchesWindow.length -1].timestamp.toDate().toLocaleDateString().slice(0,-5)}`
+                :
+                "No Matches"}
+            </Text>
             <TouchableOpacity style={[styles.pageButton, endOfMatches && styles.buttonDisabled, loading && styles.buttonLoading]}
             onPress={() => (endOfMatches || loading) ? null : onNextPage()}>
               <Text>Next</Text>
@@ -1899,17 +1905,33 @@ const styles = StyleSheet.create({
   pageButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 10,
+
+    // borderColor: 'red',
+    // borderWidth: 2,
   },
   pageButton: {
-    backgroundColor: '#8E24AA',
+    backgroundColor: '#ff9900',
     padding: 10,
+    borderRadius: 10,
+    flex: 1,
+    alignItems: 'center',
+
   },
   buttonLoading: {
-    backgroundColor: '#986da3',
+    backgroundColor: '#ff9900ad',
   },
   buttonDisabled: {
     backgroundColor: '#cccccc',
+  },
+  datePage: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 5,
+    
+    textAlign: 'center',
   },
 
 });
@@ -1978,7 +2000,7 @@ const styles_match = StyleSheet.create({
     
   },
   dateCard: {
-    flex: 1,
+    flex: 1.25,
 
     
   },
@@ -1988,7 +2010,7 @@ const styles_match = StyleSheet.create({
     color: 'white',
   },
   names: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'black',
     fontWeight: '700',
 
