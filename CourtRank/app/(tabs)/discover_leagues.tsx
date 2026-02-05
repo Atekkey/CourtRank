@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl } from 'react-native';
-import { getLeagues, joinLeague } from '../../services/firebaseService';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl, Linking } from 'react-native';
+import { getLeagues, joinLeague, verifyLeaguePassword } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { osName } from 'expo-device';
+import { Flag } from 'lucide-react-native';
+import { myPrint, confirmAction } from '../helpers';
 
 export default function DiscoverLeagues() {
   const [leagues, setLeagues] = useState([]);
@@ -13,8 +15,13 @@ export default function DiscoverLeagues() {
   const { user, userInfo, isLoading } = useAuth();
   const [showPassModal, setShowPassModal] = useState(false);
   const [password, setPassword] = useState("");
+  const [curLeague, setCurLeague] = useState(null);
   const [hiddenPass, setHiddenPass] = useState("");
-  const [selLeague, setSelLeague] = useState(null);
+  
+  // Report
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [messageBody, setMessageBody] = useState("");
+  
 
   // Set Refresh
   const [refreshing, setRefreshing] = useState(false);
@@ -34,8 +41,8 @@ export default function DiscoverLeagues() {
       setLeagues(fetchedLeagues);
       setFilteredLeagues(fetchedLeagues);
     } catch (err) {
-      console.error("Error fetching leagues:", err);
-      setError("Failed to load leagues. Please try again.");
+      console.log("Error fetching leagues:", err);
+      myPrint("Failed to load leagues. Please try again.", "Error");
       setLeagues([]);
       setFilteredLeagues([]);
     } finally {
@@ -74,8 +81,17 @@ export default function DiscoverLeagues() {
   // Filter leagues based on search query and selected level
   useEffect(() => {
     let filtered = leagues;
+    const now = new Date();
 
-    // Filter by search query (sport name)
+    // Filter by ended
+    filtered = filtered.filter(league => {
+      if (league.league_end_date) {
+        return league.league_end_date > now;
+      }
+      return true; // Include leagues with no end date
+    });
+
+    // Filter by query
     if (searchQuery.trim()) {
       filtered = filtered.filter(league =>
         league.league_name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,12 +122,12 @@ export default function DiscoverLeagues() {
       if (window.confirm('Are you sure you want to join this league?')) {
         try {
           await joinLeague(leagueId, user?.uid);
-          Alert.alert('Success', 'You have joined the league!');
+          myPrint('You have joined the league!', 'Success');
           const updatedLeagues = await getLeagues();
           setLeagues(updatedLeagues);
         } catch (joinError) {
-          console.error('Error joining league:', joinError);
-          Alert.alert('Error', 'Failed to join league. Please try again.');
+          console.log('Error joining league:', joinError);
+          myPrint('Failed to join league. Please try again.', 'Error');
         }
       }
     } else {
@@ -130,15 +146,14 @@ export default function DiscoverLeagues() {
                   const updatedLeagues = await getLeagues();
                   setLeagues(updatedLeagues);
                 } catch (joinError) {
-                  console.error('Error joining league:', joinError);
-                  Alert.alert('Error', 'Failed to join league. Please try again.');
+                  myPrint('Failed to join league. Please try again.', 'Error');
                 }
               }
             }
           ]
         );
       } catch (error) {
-        Alert.alert('Error', 'Failed to join league. Please try again.');
+        myPrint('Failed to join league. Please try again.', 'Error');
       }
     }
   };
@@ -185,20 +200,36 @@ export default function DiscoverLeagues() {
 
   const initialPassClicked = (league) => {
     setShowPassModal(true);
+    setCurLeague(league);
     setHiddenPass(league.password);
-    setSelLeague(league);
+
   };
 
   const passUnclicked = () => {
     setShowPassModal(false);
     setPassword("");
     setHiddenPass("");
-    setSelLeague(null);
+    setCurLeague(null);
   };
 
+  // const attemptJoin = async () => {
+  //   if (!password || !curLeague) {
+  //     myPrint('Please enter a password', 'Error');
+  //     return;
+  //   }
+
+  //   const isValid = await verifyLeaguePassword(curLeague.league_id, password);
+  //   if (isValid) {
+  //     await handleJoinLeague(curLeague.league_id);
+  //     passUnclicked();
+  //   } else {
+  //     myPrint('Incorrect password. Please try again.', 'Error');
+  //   }
+  // };
+
   const attemptJoin = async () => {
-    if ((password === hiddenPass) && (password !== "") && selLeague) {
-      await handleJoinLeague(selLeague.league_id);
+    if ((password === hiddenPass) && (password !== "") && curLeague) {
+      await handleJoinLeague(curLeague?.league_id);
       passUnclicked();
     } else {
       if (Platform.OS === 'web') {
@@ -208,6 +239,7 @@ export default function DiscoverLeagues() {
       }
     }
   };
+
 
   const passModal = (
       <Modal
@@ -259,11 +291,119 @@ export default function DiscoverLeagues() {
         </Modal>
     );
 
+  const handleReportSubmit = async () => {
+      const recipient = "courtrankhelp@gmail.com"; // process.env.EXPO_PUBLIC_REPORT_EMAIL || userInfo?.email
+      if (!recipient) {
+        myPrint('No recipient email configured.', 'Error');
+      }
+  
+      const offenderLabel = "League: " + (curLeague?.league_name || '_') + " | " + (curLeague?.league_id || '_');
+  
+      const reporterName = `${userInfo?.first_name || ''} ${userInfo?.last_name || ''}`.trim() || 'Unknown reporter';
+      const reporterEmail = user?.email || 'Unknown email';
+      const subject = `CourtRank Report - ${offenderLabel}`;
+      const body = [
+        `Reporter: ${reporterName} (${reporterEmail})`,
+        `Offending ${offenderLabel}`,
+        // "League: " + (curLeague?.league_name) + " | " + (curLeague?.league_id || '_'),
+        '',
+        `Details: ${messageBody || '(no message provided)'}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
+  
+      const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  
+      try {
+        const supported = await Linking.canOpenURL(mailtoUrl);
+        if (!supported) {
+          if (Platform.OS === 'web') {
+            window.alert('Cannot open mail app on this device.');
+          } else {
+            Alert.alert('Error', 'Cannot open mail app on this device.');
+          }
+          return;
+        }
+        await Linking.openURL(mailtoUrl);
+      } catch (error) {
+        console.log('Error launching email client:', error);
+        if (Platform.OS === 'web') {
+          window.alert('Failed to launch email client.');
+        } else {
+          Alert.alert('Error', 'Failed to launch email client.');
+        }
+      }
+      setMessageBody("");
+    };
+  
+  const reportModal = (
+      <Modal
+        visible={showReportModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {setMessageBody(""); setShowReportModal(false);}}
+      >
+        <View style={styles.modalContainer}>
+            <View style={styles.reportModalHeader}>
+              <Text style={styles.modalTitle}>Report</Text>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={() => {setMessageBody(""); setShowReportModal(false);}}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+  
+            <ScrollView style={styles.modalContent}>
+              {/* League Name */}
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Offending League: {(curLeague?.league_name || "")}
+                </Text>
+              </View>
+  
+              {/* Description */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Reasoning *</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={messageBody}
+                  onChangeText={(text) => setMessageBody(text)}
+                  placeholder="Message body"
+                  multiline
+                  numberOfLines={5}
+                  maxLength={500}
+                />
+              </View>
+  
+            </ScrollView>
+  
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => {setMessageBody(""); setShowReportModal(false);}}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.createButton, { backgroundColor: '#a2153fff' }]}
+                onPress={() => {handleReportSubmit(); setShowReportModal(false); setMessageBody("");}}
+              >
+                <Text style={styles.createButtonText}>Report</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+      </Modal>
+    );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>}
     >
       {passModal}
+      {reportModal}
       <View style={styles.header}>
         <Text style={styles.title}>Discover Leagues</Text>
         <Text style={styles.subtitle}>Find and join leagues near you</Text>
@@ -307,11 +447,13 @@ export default function DiscoverLeagues() {
       ) : (
         filteredLeagues.map(league => (
           <View key={league.league_id} style={styles.leagueCard}>
-            
 
             <View style={styles.leagueInfoContainer}>
               <View style={styles.leagueMainInfo}>
-                <Text style={styles.leagueName}>{league.league_name}</Text>
+                <Text style={styles.leagueName}>{league.league_name}{<TouchableOpacity style={styles.flagRed} onPress={() => {setCurLeague(league); setShowReportModal(true); }}>
+                  <Flag size={16} color="#ff0000"/>
+                </TouchableOpacity>}</Text>
+                
                 {league.description ? (<Text style={styles.leagueDescription}>{league.description}</Text>) : null}
               </View>
                 <View style={styles.leagueStats}>
@@ -359,6 +501,27 @@ export default function DiscoverLeagues() {
 }
 
 const styles = StyleSheet.create({
+  flagRed: {
+    color: '0xff0000',
+    padding: 5,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  createButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 8,
+    backgroundColor: 'orange',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  createButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
   textInput: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -401,6 +564,15 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#8E24AA',
     
+  },
+  reportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#a2153fff',
   },
   modalTitle: {
     fontSize: 20,

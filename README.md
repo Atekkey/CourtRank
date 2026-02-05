@@ -21,4 +21,14 @@ npm install firebase
 # Start  
 Be in Dir: CourtRank/CourtRank
 $ npx expo start  
+$ npx expo start -c    // To clear cache
 
+## Adds
+npm install lucide-react-native
+npm install bad-words
+npx expo install react-native-svg
+npm audit fix
+
+# Deploy: 
+npx expo export --platform web
+firebase deploy --only hosting

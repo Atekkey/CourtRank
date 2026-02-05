@@ -1,11 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList  } from 'react-native';
-import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches } from '../../services/firebaseService';
+import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList, Linking, Dimensions, useWindowDimensions } from 'react-native';
+import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, updateLeagueEndDate, updateLeagueInfo } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useMatches } from '@/hooks/useMatches';
+import { X, Calendar, Flag, RotateCcw, Pencil } from 'lucide-react-native';
+import { myPrint, checkIsProfanityAndAlert, confirmAction } from '../helpers';
+
+// Rollback
+import { getFunctions, httpsCallable } from 'firebase/functions';
+const functions = getFunctions();
+const rollbackMatch = httpsCallable(functions, 'rollback_match');
+const handleRollback = async (matchId: string): Promise<boolean> => {
+  try {
+    await rollbackMatch({ match_id: matchId });
+    myPrint('Match rolled back successfully');
+    return true;
+  } catch (error: any) {
+    myPrint(error.message || 'Failed to rollback match', 'Rollback Failed');
+    return false;
+  }
+};
+
+
+
 
 
 export default function MyLeagues() {
@@ -30,8 +50,9 @@ export default function MyLeagues() {
     players: [],
     description: "",
     password: "",
+    archived: false,
   });
-  const expiryImplemented = false;
+  const expiryImplemented = true;
   const privateImplemented = true;
   // Log & Search
   const [search, setSearch] = useState('');
@@ -46,14 +67,26 @@ export default function MyLeagues() {
   const [messageHeader, setMessageHeader] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [showNotifModal, setShowNotifModal] = useState(false);
+  // Report
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportPlayer, setReportPlayer] = useState(null);
+  const [playerNotLeague, setPlayerNotLeague] = useState(false);
   // Match History
   const [matchHistory, setMatchHistory] = useState([]);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Admin Settings
+  const [showAdminSettingsModal, setShowAdminSettingsModal] = useState(false);
+  const [editLeagueName, setEditLeagueName] = useState('');
+  const [editLeagueDescription, setEditLeagueDescription] = useState('');
+  const [editLeagueLocation, setEditLeagueLocation] = useState('');
   // Leaderboard
   const [eloNotScore, setEloNotScore] = useState(true);
 
   const {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches, startOfMatches} = useMatches();
+  // Screen width - for responsive layout
+  const { width: screenWidth } = useWindowDimensions();
+  const isSmallScreen = screenWidth < 520;
 
 
   useEffect(() => {
@@ -92,7 +125,7 @@ export default function MyLeagues() {
       setMyLeagues(leagues);
       // fetchAllMatchHistory();
     } catch (error) {
-      console.error('Error fetching my leagues:', error);
+      myPrint('Error fetching my leagues:', "Error");
     }
     setLoading(false);
   };
@@ -282,16 +315,21 @@ export default function MyLeagues() {
     const elo = pInfo.elo;
     const score = pInfo.score || 0;
     const bigScore = score >= 2400;
+    var pInfo2 = {...pInfo, pId: pId};
     return (
       <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
-        <Text style={[styles.rank, { color: getRankColor(rank || 10) }]} >{rank}</Text>
-        <Text style={[styles.name]}>{name}</Text>
-        <Text style={[styles.name]}>{wins} / {losses}</Text>
-        {eloNotScore ? 
-        <Text style={[Platform.OS == "web" ? styles.elo : styles.name, { color: getEloColor(elo || 0) }]}>{elo}  </Text>
-        :
-        <Text style={[Platform.OS == "web" ? (bigScore ? styles.score : styles.elo) : styles.name, { color: getScoreColor(score || 0) }]}>{score}  </Text>
-        }
+        <Text style={[styles.rank, { color: getRankColor(rank || 10) }]}>{rank}</Text>
+        <View style={styles.name}>
+          <Text style={{ fontWeight: '500' }}>{name} {" "}
+            <TouchableOpacity style={styles.flagRed} onPress={() => {setReportPlayer(pInfo2); setPlayerNotLeague(true); reportClicked()}}>
+              <Flag size={12} color="#ff0000"/>
+            </TouchableOpacity>
+          </Text>
+        </View>
+        <Text style={styles.winLoss}>{wins} / {losses}</Text>
+        <Text style={[styles.elo, { color: eloNotScore ? getEloColor(elo || 0) : getScoreColor(score || 0) }]}>
+          {eloNotScore ? elo : score}
+        </Text>
       </View>
     );
   }) : null;
@@ -316,51 +354,23 @@ export default function MyLeagues() {
 
           
           <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
-            <Text style={[styles.rank]}> Rank</Text>
-            <Text style={[styles.name]}>Name</Text>
-            {true && <Text style={[styles.name]}>W / L</Text>}
-            {/* <Text style={Platform.OS == "web" ? styles.elo : styles.name}>Elo     </Text> */}
-
-            {/* <TouchableOpacity onPress={() => setEloNotScore(!eloNotScore)} style={styles.eloScoreButton}>
-              <Text style={Platform.OS == "web" ? styles.elo : styles.name}>{eloNotScore ? "Elo  " : "Score"}</Text>
-            </TouchableOpacity> */}
-
-            <View style={styles.togglePillContainer}>
+            <Text style={styles.rank}>Rank</Text>
+            <Text style={styles.name}>Name</Text>
+            <Text style={styles.winLoss}>W / L</Text>
+            <View style={styles.eloHeader}>
               <TouchableOpacity
-                style={[
-                  styles.togglePillButton,
-                  eloNotScore && styles.togglePillActive,
-                ]}
+                style={[styles.togglePillButton, eloNotScore && styles.togglePillActive]}
                 onPress={() => setEloNotScore(true)}
               >
-                <Text
-                  style={[
-                    styles.togglePillText,
-                    eloNotScore && styles.togglePillTextActive,
-                  ]}
-                >
-                  Elo
-                </Text>
+                <Text style={[styles.togglePillText, eloNotScore && styles.togglePillTextActive]}>Elo</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[
-                  styles.togglePillButton,
-                  !eloNotScore && styles.togglePillActive,
-                ]}
+                style={[styles.togglePillButton, !eloNotScore && styles.togglePillActive]}
                 onPress={() => setEloNotScore(false)}
               >
-                <Text
-                  style={[
-                    styles.togglePillText,
-                    !eloNotScore && styles.togglePillTextActive,
-                  ]}
-                >
-                  Score
-                </Text>
+                <Text style={[styles.togglePillText, !eloNotScore && styles.togglePillTextActive]}>Score</Text>
               </TouchableOpacity>
             </View>
-
           </View>
           <ScrollView>
             {leaderboardMap}
@@ -382,7 +392,77 @@ export default function MyLeagues() {
     setMessageHeader("");
   };
 
+  // REPORT FXNS
+  const reportClicked = async () => {
+    setShowReportModal(true);
+  };
+
+  const reportUnclicked = async () => {
+    setShowReportModal(false);
+    setMessageBody("");
+    setMessageHeader("");
+    setReportPlayer(null);
+    setPlayerNotLeague(false);
+  };
+
+  const handleReportSubmit = async () => {
+    const recipient = "courtrankhelp@gmail.com"; // process.env.EXPO_PUBLIC_REPORT_EMAIL || userInfo?.email
+    if (!recipient) {
+      myPrint('No recipient email configured.', 'Error');
+    }
+
+    const offenderLabel = playerNotLeague
+      ? "Player: " + ((reportPlayer?.first_name + ' ') || '') + (reportPlayer?.last_name || '') 
+        + " | " + reportPlayer?.pId
+      : "League: " + (curLeague?.league_name || '_') + " | " + (curLeague?.league_id || '_');
+
+    const reporterName = `${userInfo?.first_name || ''} ${userInfo?.last_name || ''}`.trim() || 'Unknown reporter';
+    const reporterEmail = user?.email || 'Unknown email';
+    const subject = `CourtRank Report - ${offenderLabel}`;
+    const off = "`Offender: ${offenderLabel}`,";
+    const body = [
+      `Reporter: ${reporterName} (${reporterEmail})`,
+      `Offender: ${offenderLabel}`,
+      (curLeague?.league_name && playerNotLeague) ? "League: " + (curLeague?.league_name) + " | " + (curLeague?.league_id || '_') : null,
+      '',
+      'Details:',
+      messageBody || '(no message provided)'
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const mailtoUrl = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    try {
+      const supported = await Linking.canOpenURL(mailtoUrl);
+      if (!supported) {
+        if (Platform.OS === 'web') {
+          window.alert('Cannot open mail app on this device.');
+        } else {
+          Alert.alert('Error', 'Cannot open mail app on this device.');
+        }
+        return;
+      }
+      await Linking.openURL(mailtoUrl);
+    } catch (error) {
+      console.error('Error launching email client:', error);
+      if (Platform.OS === 'web') {
+        window.alert('Failed to launch email client.');
+      } else {
+        Alert.alert('Error', 'Failed to launch email client.');
+      }
+    }
+  };
+
   const handleCreateNotif = async () => {
+    console.log("One ");
+    console.log("Header: ", messageHeader);
+    console.log("Body: ", messageBody);
+    if(checkIsProfanityAndAlert(messageHeader) || checkIsProfanityAndAlert(messageBody)) {
+      console.log("Two ");
+      return;
+    }
+    console.log("Three ");
     try {
       console.log("[my_leagues]: await create notification");
       await createNotification({
@@ -494,6 +574,13 @@ export default function MyLeagues() {
       }
       return;
     }
+
+    if(checkIsProfanityAndAlert(newLeague.league_name) 
+      || checkIsProfanityAndAlert(newLeague.description) 
+      || checkIsProfanityAndAlert(newLeague.password)) {
+        return;
+    }
+
     try {
       console.log("[my_leagues]: await createLeague");
       await createLeague(newLeague);
@@ -515,7 +602,8 @@ export default function MyLeagues() {
         whitelist_pids: [],
         players: [],
         description: "",
-        password: ""
+        password: "",
+        archived: false
       });
 
       // Show success notification
@@ -750,7 +838,7 @@ export default function MyLeagues() {
   const toggleWin = (id) => {
     setSearch('');
     setWinTeam(prev => {
-      if (prev.includes(id)) return prev;
+      if (prev.includes(id)) return prev.filter(pid => pid !== id);
       setLossTeam(lossPrev => lossPrev.filter(pid => pid !== id));
       return [...prev, id];
     });
@@ -759,16 +847,10 @@ export default function MyLeagues() {
   const toggleLoss = (id) => {
     setSearch('');
     setLossTeam(prev => {
-      if (prev.includes(id)) return prev;
+      if (prev.includes(id)) return prev.filter(pid => pid !== id);
       setWinTeam(winPrev => winPrev.filter(pid => pid !== id));
       return [...prev, id];
     });
-  };
-
-  const toggleClear = (id) => {
-    setSearch('');
-    setWinTeam(prev => prev.filter(pid => pid !== id));
-    setLossTeam(prev => prev.filter(pid => pid !== id));
   };
 
   const getPlayerNames = (team) => {
@@ -823,7 +905,7 @@ export default function MyLeagues() {
           </View>
 
          {/* <ScrollView> */}
-            <View style={(Platform.OS == "web" && window.innerWidth >= 800) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
+            <View style={(isSmallScreen) ? styles_col.modalContentContainer : styles_col.modalContentContainerDownwards}>
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
@@ -849,12 +931,6 @@ export default function MyLeagues() {
                         <Text style={styles.eloText}>{info.elo}{isLoss && ' (L)'}{isWin && ' (W)'}</Text>
                       </View>
 
-                      <TouchableOpacity
-                        style={[styles.clearCol]}
-                        onPress={() => toggleClear(id)}
-                      >
-                        <Text style={styles.teamText}>C</Text>
-                      </TouchableOpacity>
 
                       <TouchableOpacity
                         style={[styles.winCol, isWin && styles.selectedWin]}
@@ -986,11 +1062,29 @@ export default function MyLeagues() {
 
   // Old matchMap using all matchHistory 
   /*
+  const rollBackPressed = async (matchId: string) => {
+    if (!matchId) { return; }
+
+    const confirmed = await confirmAction(
+      'Are you sure you want to undo this match? ELO ratings will be reverted.',
+      'Rollback Match'
+    );
+
+    if (confirmed) {
+      const success = await handleRollback(matchId);
+      if (success) {
+        handleRefresh();
+      }
+    }
+  };
+  
   const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
     if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    const playerWon = user?.uid && String(user.uid) in matchInfo.win_team;
+    const isProcessed = matchInfo.processed;
     return (
-      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+      <View key={matchInfo.id} style={[styles_match.matchContainer, !isProcessed && { opacity: 0.5 }]}>
 
         
         
@@ -1002,12 +1096,20 @@ export default function MyLeagues() {
                 { fontSize: Math.max(16 - index * 2, 12) }
               ]}>{name}</Text>
             ))}
+            
           </View>
         
 
           <View style={[styles_match.card, styles_match.dateCard]}>
             <Text style={styles_match.matchDate}>{date}</Text>
             <Text style={styles_match.vsText}>vs</Text>
+
+            {(playerWon && (isProcessed)) && (
+            <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
+              <RotateCcw size={24} color="red" />
+            </TouchableOpacity>)
+            }
+
           </View>
 
           <View style={[styles_match.card, styles_match.loserCard]}>
@@ -1082,129 +1184,524 @@ export default function MyLeagues() {
   );
   
 
-  // LEAGUE CARDS
-  const leagueCards = myLeagues.map(league => { 
+  // DATE MODAL
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [savedDate, setSavedDate] = useState('');
+  
+  
+  const handleCancelDate = () => {
+    setSelectedDate(savedDate); setShowDateModal(false);
+  };
+  
+  const parseDateFromMMDDYYYY = (dateStr) => {
+    if (!dateStr || dateStr.length < 10) return null;
+    
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return null;
+    
+    const month = parseInt(parts[0], 10) - 1 ; // -1 for 0 idx
+    const day = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    if (day < 1 || day > 31 || month < 0 || month > 11 || year < 2000) return null;
+    
+    return new Date(year, month, day);
+  };
+
+  const formatDateToMMDDYYYY = (timestamp) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  const handleSaveDate = async () => {
+    if (!selectedDate && !curLeague?.league_end_date) {
+      if (Platform.OS === 'web') {
+        window.alert('Please select a date or leave blank to remove expiration');
+      } else {
+        Alert.alert('Error', 'Please select a date or leave blank to remove expiration');
+      }
+      return;
+    }
+    
+    try {
+      let endDate = null;
+      
+      if (selectedDate) {
+        const parsedDate = parseDateFromMMDDYYYY(selectedDate);
+        if (!parsedDate) {
+          if (Platform.OS === 'web') {
+            window.alert('Invalid date format. Please use DD/MM/YYYY');
+          } else {
+            Alert.alert('Error', 'Invalid date format. Please use DD/MM/YYYY');
+          }
+          return;
+        }
+        endDate = parsedDate.getTime();
+      }
+      
+      // Update league end date in Firebase
+      const success = await updateLeagueEndDate(curLeague?.league_id, endDate);
+      
+      if (!success) {
+        myPrint('Failed to update league end date', "Error");
+      }
+      
+      setSavedDate(selectedDate);
+      setShowDateModal(false);
+      
+      // Refresh leagues to show updated data
+      await handleRefresh();
+      
+      if (Platform.OS === 'web') {
+        window.alert(endDate ? 'League end date set successfully' : 'League end date removed');
+      } else {
+        Alert.alert('Success', endDate ? 'League end date set successfully' : 'League end date removed');
+      }
+    } catch (error) {
+        myPrint('Error updating league end date:', "Error");
+    }
+  };
+  
+  const dateModal = (
+    <Modal
+        visible={showDateModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCancelDate}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeaderDate}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Calendar color="white" size={24} style={{ marginRight: 10 }} />
+              <Text style={styles.modalTitle}>Set League End Date</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={handleCancelDate}
+            >
+              <X color="white" size={24} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>League End Date *</Text>
+              <TextInput
+                style={styles.textInput}
+                value={selectedDate}
+                onChangeText={setSelectedDate}
+                placeholder="MM/DD/YYYY (e.g., 08/25/2025)"
+                placeholderTextColor="#999"
+              />
+              <Text style={styles_date.dateHintText}>
+                Leave blank for no expiration date
+              </Text>
+            </View>
+            
+            {curLeague && (
+              <View style={styles_date.leagueInfoBox}>
+                <Text style={styles_date.leagueInfoTitle}>Current League:  {curLeague.league_name}</Text>
+                {curLeague.league_end_date && (
+                  <Text style={styles_date.leagueInfoText}>
+                    Current end date: {new Date(curLeague.league_end_date).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={handleCancelDate}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.createButton}
+              onPress={handleSaveDate}
+            >
+              <Text style={styles.createButtonText}>Save Date</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+  );
+
+  // ADMIN SETTINGS MODAL
+  const adminSettingsClicked = (league) => {
+    setCurLeague(league);
+    setEditLeagueName(league.league_name || '');
+    setEditLeagueDescription(league.description || '');
+    setEditLeagueLocation(league.location || '');
+    setShowAdminSettingsModal(true);
+  };
+
+  const handleCancelAdminSettings = () => {
+    setShowAdminSettingsModal(false);
+    setEditLeagueName('');
+    setEditLeagueDescription('');
+    setEditLeagueLocation('');
+  };
+
+  const handleSaveAdminSettings = async () => {
+    if (!editLeagueName.trim()) {
+      myPrint('League name is required', 'Error');
+      return;
+    }
+
+    if (checkIsProfanityAndAlert(editLeagueName) ||
+        checkIsProfanityAndAlert(editLeagueDescription) ||
+        checkIsProfanityAndAlert(editLeagueLocation)) {
+      return;
+    }
+
+    try {
+      const success = await updateLeagueInfo(curLeague?.league_id, {
+        league_name: editLeagueName.trim(),
+        description: editLeagueDescription.trim(),
+        location: editLeagueLocation.trim(),
+      });
+
+      if (success) {
+        if (Platform.OS === 'web') {
+          window.alert('League settings updated successfully!');
+        } else {
+          Alert.alert('Success', 'League settings updated successfully!');
+        }
+        handleCancelAdminSettings();
+        handleRefresh();
+      } else {
+        myPrint('Failed to update league settings', 'Error');
+      }
+    } catch (error) {
+      myPrint('Error updating league settings', 'Error');
+    }
+  };
+
+  const handleSendNotifFromAdmin = () => {
+    setShowAdminSettingsModal(false);
+    notifClicked(curLeague);
+  };
+
+  const adminSettingsModal = (
+    <Modal
+      visible={showAdminSettingsModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleCancelAdminSettings}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeaderAdminSettings}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pencil color="white" size={24} style={{ marginRight: 10 }} />
+            <Text style={styles.modalTitle}>Admin Settings</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleCancelAdminSettings}
+          >
+            <X color="white" size={24} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          {/* League Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>League Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editLeagueName}
+              onChangeText={setEditLeagueName}
+              placeholder="Enter league name"
+              maxLength={50}
+            />
+          </View>
+
+          {/* Description */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Description</Text>
+            <TextInput
+              style={[styles.textInput, styles.textArea]}
+              value={editLeagueDescription}
+              onChangeText={setEditLeagueDescription}
+              placeholder="Enter league description (optional)"
+              multiline
+              numberOfLines={2}
+              maxLength={100}
+            />
+          </View>
+
+          {/* Location */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Location</Text>
+            <TextInput
+              style={styles.textInput}
+              value={editLeagueLocation}
+              onChangeText={setEditLeagueLocation}
+              placeholder="Example: UIUC Tennis Courts (optional)"
+              maxLength={100}
+            />
+          </View>
+
+          {/* Send Notification Button */}
+          <TouchableOpacity
+            style={styles.sendNotifButton}
+            onPress={handleSendNotifFromAdmin}
+          >
+            <Text style={styles.sendNotifButtonText}>Send Notification</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        <View style={styles.modalActions}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelAdminSettings}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={handleSaveAdminSettings}
+          >
+            <Text style={styles.createButtonText}>Save Edits</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // LEAGUE CARDS - Unified function for both active and expired leagues
+  const renderLeagueCard = (league, isExpired: boolean) => {
     const stats = league?.elo_info[user?.uid];
     const numGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.ties || 0);
     const LID = league.league_id;
-    const leagueExpDate = league.league_end_date;
-    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
 
     return (
-    <View key={LID} style={[styles.leagueCard, leagueDidExpire && styles.leagueCardExpired]}>
-      <View style={styles.leagueHeader}>
-
-        <View style={styles.leagueHeaderLeft}>
-
-        <Text style={styles.leagueName}>{league.league_name}</Text>
-        {(user?.uid == league?.admin_pid && expiryImplemented) && (<TouchableOpacity style={styles.leagueEnd} onPress={() => {}}>
-          {/* <Text style={styles.leagueEndText}>📅</Text> */}
-        </TouchableOpacity>)}
+      <View key={LID} style={[styles.leagueCard, isExpired && styles.leagueCardExpired]}>
         
-        <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
-        </View>
-
-        <View style={styles.leagueHeaderRight}>
-          <Text style={styles.leagueInfo}>
-            👥 {league.players.length} Competitors
-          </Text>
-          <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
+        <View style={styles.leagueHeader}>
           
-          
-        </View>
-        
-         
-      </View>
-      
-      {/* <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text> */}
-      {/* <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text> */}
+          <View style={styles.leagueHeaderLeft}>
+            <Text style={styles.leagueName}>{league.league_name}</Text>
+            <Text style={styles.leagueDescription}>{(league.description) ? league.description : ""}</Text>
+            {isSmallScreen && <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>}
+          </View>
 
-      {/* Stats Section */}
-      <View style={[styles.statsContainer, leagueDidExpire && styles.statsContainerExpired]}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>ELO Rating</Text>
-          <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
-            {stats?.elo || ""}
-          </Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Win Rate</Text>
-          <Text style={styles.statValue}>
-            {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
-          </Text>
-        </View>
-        
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Games</Text>
-          <Text style={styles.statValue}>{numGames}</Text>
-        </View>
-      </View>
+          <View style={styles.leagueHeaderRight}>
+            {isSmallScreen && 
+            <TouchableOpacity style={[styles.leagueEnd, !isExpired && { marginRight: 0 }]} onPress={() => {
+                if (user?.uid == league?.admin_pid) {
+                  setCurLeague(league);
+                  setShowDateModal(!showDateModal);
+                }
+              }}>
+              <Text style={styles.leagueEndText}>📅 {league.league_end_date ? (formatDateToMMDDYYYY(league.league_end_date)) : "TBD"}</Text>
+            </TouchableOpacity>
+            }
+            <Text style={styles.leagueInfo}>
+              👥 {league.players.length}{!isSmallScreen && " Competitors"}
+            </Text>
+            {!isSmallScreen && 
+              <Text style={styles.leagueInfo}>{(league.location) ? ("📍 " + league.location) : "" }</Text>
+            }
+          </View>
 
-      {/* W-T-L Record */}
-      <View style={[styles.recordContainer, leagueDidExpire && styles.recordContainerExpired]}>
-        <View style={styles.recordItem}>
-           <Text style={styles.recordNumberWin}>{stats?.wins ?? 0}</Text>
-          <Text style={styles.recordLabel}>Wins</Text>
-        </View>
-        <View style={styles.recordSeparator} />
-        {/* <View style={styles.recordItem}>
-           <Text style={styles.recordNumber}>{stats?.ties ?? 0}</Text>
-          <Text style={styles.recordLabel}>Ties</Text>
-        </View>
-        <View style={styles.recordSeparator} /> */}
-        <View style={styles.recordItem}>
-           <Text style={styles.recordNumberLoss}>{stats?.losses ?? 0}</Text>
-          <Text style={styles.recordLabel}>Losses</Text>
-        </View>
-      </View>
-
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
-          <Text style={styles.viewButtonText}>Match History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
-          {Platform.OS == "web" && window.innerWidth >= 800 ? 
-            <Text style={styles.viewButtonText}>Leaderboard</Text>
-          : <Text style={styles.viewButtonText}>Leader-board</Text>
+          {!isSmallScreen && 
+            <TouchableOpacity style={[styles.leagueEnd, !isExpired && { marginRight: 5 }]} onPress={() => {
+                if (user?.uid == league?.admin_pid) {
+                  setCurLeague(league);
+                  setShowDateModal(!showDateModal);
+                }
+              }}>
+              <Text style={styles.leagueEndText}>📅 {league.league_end_date ? (formatDateToMMDDYYYY(league.league_end_date)) : "TBD"}</Text>
+            </TouchableOpacity>
           }
-        </TouchableOpacity>
-        
-        { user?.uid === league?.admin_pid ? 
-        (<TouchableOpacity 
-          style={styles.notifButton}
-          onPress={() => notifClicked(league)}
-        >
-          {Platform.OS == "web" && window.innerWidth >= 800 ? 
-          <Text style={styles.leaveButtonText}>Send Notification</Text>
-          :
-          <Text style={styles.leaveButtonText}>Notify Users</Text>
-        }
-        </TouchableOpacity>) 
-        :
-        (<TouchableOpacity 
-          style={styles.leaveButton}
-          onPress={() => handleLeaveLeague(LID, league.league_name)}
-        >
-          <Text style={styles.leaveButtonText}>Leave League</Text>
-        </TouchableOpacity>)
-        }
-      </View>
 
-      
-      {/* Log Game Button */}
-      {(!leagueDidExpire) && (<TouchableOpacity 
-        style={styles.logGameButton}
-        onPress={() => logPressed(league)}
-      >
-        <Text style={styles.logGameButtonText}>+</Text>
-      </TouchableOpacity>)}
-    </View>
-    )
+          <TouchableOpacity style={styles.flagRed} onPress={() => {setReportPlayer(null); setCurLeague(league); setPlayerNotLeague(false); reportClicked()}}>
+            <Flag size={22} color="#ff0000"/>
+          </TouchableOpacity>
+          
+        </View>
+
+        {/* Stats Section - 2 columns on small screen, 3 on large */}
+        <View style={[styles.statsContainer, isExpired && styles.statsContainerExpired, isSmallScreen && styles.statsContainerSmall]}>
+          <View style={[styles.statItem, isSmallScreen && styles.statItemSmall]}>
+            <Text style={styles.statLabel}>ELO Rating</Text>
+            <Text style={[styles.statValue, { color: getEloColor(stats?.elo || 0) }]}>
+              {stats?.elo || ""}
+            </Text>
+          </View>
+
+          <View style={[styles.statItem, isSmallScreen && styles.statItemSmall]}>
+            <Text style={styles.statLabel}>Win Rate</Text>
+            <Text style={styles.statValue}>
+              {(numGames === 0) ? "--" : getWinRate(stats?.wins || 0, stats?.losses || 0, stats?.ties || 0)}%
+            </Text>
+          </View>
+
+          <View style={[styles.statItem, isSmallScreen && styles.statItemSmall]}>
+            <Text style={styles.statLabel}>Games</Text>
+            <Text style={styles.statValue}>{numGames}</Text>
+          </View>
+        </View>
+
+        {/* W-T-L Record */}
+        <View style={[styles.recordContainer, isExpired && styles.recordContainerExpired]}>
+          <View style={styles.recordItem}>
+            <Text style={styles.recordNumberWin}>{stats?.wins ?? 0}</Text>
+            <Text style={styles.recordLabel}>Wins</Text>
+          </View>
+          <View style={styles.recordSeparator} />
+          <View style={styles.recordItem}>
+            <Text style={styles.recordNumberLoss}>{stats?.losses ?? 0}</Text>
+            <Text style={styles.recordLabel}>Losses</Text>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.viewButton} onPress={() => matchPressed(league)}>
+            <Text style={styles.viewButtonText}>Match{isSmallScreen ? "\n" : " "}History</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.viewButton} onPress={() => lbPressed(league)}>
+            <Text style={styles.viewButtonText}>Leader{isSmallScreen ? "\n" : ""}board</Text>
+          </TouchableOpacity>
+
+          { user?.uid === league?.admin_pid ?
+          (<TouchableOpacity
+            style={styles.adminSettings}
+            onPress={() => adminSettingsClicked(league)}
+          >
+            
+            <Text style={styles.leaveButtonText}>
+              Admin Settings
+            </Text>
+          </TouchableOpacity>)
+          
+          // <TouchableOpacity
+          //   style={styles.adminSettingsButton}
+          //   onPress={() => adminSettingsClicked(league)}
+          // >
+          //   <Pencil size={16} color="white" style={{ marginRight: 6 }} />
+          //   <Text style={styles.adminSettingsButtonText}>Admin Settings</Text>
+          // </TouchableOpacity>
+          
+          :
+          (<TouchableOpacity
+            style={styles.leaveButton}
+            onPress={() => handleLeaveLeague(LID, league.league_name)}
+          >
+            <Text style={styles.leaveButtonText}>Leave League</Text>
+          </TouchableOpacity>)
+          }
+        </View>
+
+
+        {/* Log Game Button - only for active leagues */}
+        {!isExpired && (
+          <TouchableOpacity
+            style={styles.logGameButton}
+            onPress={() => logPressed(league)}
+          >
+            <Text style={styles.logGameButtonText}>+</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  const leagueCards = myLeagues.map(league => {
+    const leagueExpDate = league.league_end_date;
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
+    return leagueDidExpire ? null : renderLeagueCard(league, false);
   });
+
+  const expiredLeagueCards = myLeagues.map(league => {
+    const leagueExpDate = league.league_end_date;
+    const leagueDidExpire = ((leagueExpDate) && leagueExpDate < Date.now()) && expiryImplemented;
+    return !leagueDidExpire ? null : renderLeagueCard(league, true);
+  });
+
+  // REPORT MODAL
+  const reportModal = (
+    <Modal
+      visible={showReportModal}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => reportUnclicked()}
+    >
+      <View style={styles.modalContainer}>
+          <View style={styles.reportModalHeader}>
+            <Text style={styles.modalTitle}>Report</Text>
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => reportUnclicked()}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {/* League Name */}
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Offending {
+              playerNotLeague ? 
+                "Player: " + (((reportPlayer?.first_name + " ") || "") + (reportPlayer?.last_name || ""))
+              : "League: " + (curLeague?.league_name || "")}
+              </Text>
+              {/*  {reportPlayer?.first_name || "" + " " + reportPlayer?.last_name || ""} */}
+            </View>
+
+            {/* Description */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Reasoning *</Text>
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={messageBody}
+                onChangeText={(text) => setMessageBody(text)}
+                placeholder="Message body"
+                multiline
+                numberOfLines={5}
+                maxLength={500}
+              />
+            </View>
+
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity 
+              style={styles.cancelButton}
+              onPress={() => reportUnclicked()}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.createButton, { backgroundColor: '#a2153fff' }]}
+              onPress={() => {handleReportSubmit(); reportUnclicked();}}
+            >
+              <Text style={styles.createButtonText}>Report</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+    </Modal>
+  );
+
+  const horzBar = (
+    <View style={{ height: 1, backgroundColor: '#ccc', marginVertical: 40 }}></View>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 80 }}
@@ -1213,12 +1710,17 @@ export default function MyLeagues() {
       {header}
       {resultsCount}
       {myLeagues.length === 0 ? ( noLeagues ) : ( leagueCards ) }
+      {myLeagues.length === 0 ? ( null ) : ( horzBar ) }
+      {myLeagues.length === 0 ? ( null ) : ( expiredLeagueCards ) }
 
       {createLeagueModal}
       {leaderboardModal}
       {logModal}
       {notificationModal}
+      {reportModal}
       {matchHistoryModal}
+      {dateModal}
+      {adminSettingsModal}
 
       <TouchableOpacity 
         style={styles.createLeagueButton}
@@ -1370,6 +1872,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#ddd',
     alignItems: 'center',
+    paddingHorizontal: 5,
   },
   rank: {
     width: 40,
@@ -1377,22 +1880,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   name: {
-    flex: 1, 
-    paddingHorizontal: 15,
+    flex: 3,
+    paddingHorizontal: 5,
     fontWeight: '500',
-
-   
-
+  },
+  winLoss: {
+    flex: 2,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   elo: {
-    width: 60,
-    textAlign:'center',
+    flex: 2,
+    textAlign: 'center',
     fontWeight: '600',
-
-    
+  },
+  eloHeader: {
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   score: {
-    width: 60,
+    width: 80,
     textAlign: 'center',
     fontWeight: '600',
 
@@ -1542,8 +2050,8 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   leagueEnd: {
-    backgroundColor: '#444',
-    padding: 10,
+    // backgroundColor: '#7e7d7d',
+    padding: 5,
     borderRadius: 10,
     fontSize: 26,
     color: '#666',
@@ -1551,6 +2059,8 @@ const styles = StyleSheet.create({
   },
   leagueEndText: {
     fontSize: 18,
+    color: "#666",
+    textAlign: 'left',
   },
   leagueDescription: {
     fontSize: 14,
@@ -1576,6 +2086,14 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
+  },
+  statsContainerSmall: {
+    flexWrap: 'wrap',
+    justifyContent: 'space-evenly',
+  },
+  statItemSmall: {
+    width: '50%',
+    marginBottom: 10,
   },
   statLabel: {
     fontSize: 12,
@@ -1702,6 +2220,38 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 10,
   },
+  adminSettings: {
+    backgroundColor: '#555',
+    padding: 12,
+    borderRadius: 8,
+    flex: 1,
+    marginLeft: 10,
+  },
+  adminSettingsButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  adminSettingsPlaceholder: {
+    fontSize: 16,
+    color: '#888',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 40,
+  },
+  sendNotifButton: {
+    backgroundColor: '#8536f4ff',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  sendNotifButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   leaveButtonText: {
     color: 'white',
     fontSize: 16,
@@ -1727,6 +2277,33 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
     backgroundColor: '#8E24AA',
+  },
+  reportModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#a2153fff',
+  },
+  modalHeaderDate: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#737373',
+  },
+  modalHeaderAdminSettings: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#555',
   },
   modalTitleNotWeb: {
     fontSize: 15,
@@ -1934,6 +2511,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  flagRed: {
+    color: '0xff0000',
+    padding: 5,
+  }
 });
 
 const styles_match = StyleSheet.create({
@@ -2003,6 +2584,7 @@ const styles_match = StyleSheet.create({
     flex: 1.25,
 
     
+    flex: 1,    
   },
   teamName: {
     fontSize: 16,
@@ -2021,4 +2603,31 @@ const styles_match = StyleSheet.create({
     fontWeight: '600',
   }
 
+});
+
+const styles_date = StyleSheet.create({dateHintText: {
+  fontSize: 12,
+  color: '#999',
+  marginTop: 4,
+  fontStyle: 'italic',
+},
+leagueInfoBox: {
+  backgroundColor: '#f8f9fa',
+  padding: 15,
+  borderRadius: 8,
+  marginTop: 10,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
+leagueInfoTitle: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: '#666',
+  marginBottom: 5,
+},
+leagueInfoText: {
+  fontSize: 14,
+  color: '#333',
+  marginTop: 3,
+}
 });

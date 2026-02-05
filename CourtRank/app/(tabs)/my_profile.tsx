@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, TextInput, ActivityIndicator, Image, Modal, Linking } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getPlayerInfo } from '../../services/firebaseService';
+import { getPlayerInfo, updateUserNames } from '../../services/firebaseService';
 import { osName } from 'expo-device';
+import { myPrint, privatePolicy } from '../helpers';
 
 export default function MyProfile() {
   const { user, userInfo, isLoading, logout } = useAuth();
@@ -11,25 +12,94 @@ export default function MyProfile() {
   const [showNotif, setShowNotif] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const editImplemented = false;
+  const [showEdit, setShowEdit] = useState(false);
+  const notifImplem = false;
 
-  const toggleNotif = () => {
-    setShowNotif(!showNotif);
-    setShowHelp(false);
-    setShowPrivacy(false);
-  };
-
-  const togglePrivacy = () => {
-    setShowPrivacy(!showPrivacy);
+  const hideAll = () => {
     setShowNotif(false);
     setShowHelp(false);
+    setShowPrivacy(false);
+    setShowEdit(false);
+  };
+
+  const toggleNotif = () => {
+    hideAll();
+    setShowNotif(!showNotif);
   };
 
   const toggleHelp = () => {
+    hideAll();
     setShowHelp(!showHelp);
-    setShowNotif(false);
-    setShowPrivacy(false);
   };
+
+  const togglePrivacy = () => {
+    hideAll();
+    setShowPrivacy(!showPrivacy);
+  };
+
+  const toggleEdit = () => {
+    hideAll();
+    setShowEdit(!showEdit);
+  };
+
+  const [firstName, setFirstName] = useState(userInfo?.first_name || '');
+  const [lastName, setLastName] = useState(userInfo?.last_name || '');
+  // Edit Profile Component
+  const editProfileComponent = (
+    <View style={styles.inputGroup}>
+
+      <View style={{marginTop : 10}}></View> {/* Spacer */}
+
+      
+      <View style={{ flexDirection: 'column', gap: 10 }}>
+
+        <Text style={styles.inputLabel}>First Name</Text>
+        <TextInput
+          style={styles.textInput}
+          value={firstName}
+          onChangeText={(text) => setFirstName(text)}
+          placeholder="First Name"
+          maxLength={50}
+        />
+
+        <Text style={styles.inputLabel}>Last Name</Text>
+        <TextInput
+          style={styles.textInput}
+          value={lastName}
+          onChangeText={(text) => setLastName(text)}
+          placeholder="Last Name"
+          maxLength={50}
+        />
+        
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={async () => {
+            // On Save Names
+            if (!userInfo) {
+              return;
+            }
+            const ret = await updateUserNames(user?.uid, firstName, lastName);
+            
+            if(!ret) {
+              myPrint("Error updating names", "Error");
+              return;
+            }
+            // Optimistic update
+            userInfo.first_name = firstName;
+            userInfo.last_name = lastName;
+
+            myPrint(`First Name: ${firstName}\nLast Name: ${lastName}`, 'Profile Updated');
+            toggleEdit();
+          }}> 
+            <Text style={styles.saveText}>Save Name</Text>
+          </TouchableOpacity>
+      </View>
+
+    </View>
+
+
+  );
+  
 
   const handleLogout = () => {
     if (Platform.OS === 'web') {
@@ -117,31 +187,42 @@ export default function MyProfile() {
       
       <View style={styles.settingsCard}>
         <Text style={styles.cardTitle}>Settings</Text>
-        {editImplemented && <TouchableOpacity style={styles.settingItem}>
+        <TouchableOpacity style={styles.settingItem} onPress={() => toggleEdit()}>
           <Text style={styles.settingText}>Edit Profile</Text>
-        </TouchableOpacity>}
-        <TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
-          <Text style={styles.settingText}>Notifications</Text>
-          {showNotif && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
         </TouchableOpacity>
+        {showEdit && editProfileComponent}
+        
+         {notifImplem && (<TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
+          <Text style={styles.settingText}>Notifications</Text>
+          {showNotif && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
+        </TouchableOpacity>)}
         <TouchableOpacity style={styles.settingItem} onPress={() => togglePrivacy()}>
-          <Text style={styles.settingText}>Privacy Settings</Text>
-          {showPrivacy && <Text style={styles.settingSubtext}>Yet to be implemented</Text>}
+          <Text style={styles.settingText}>Privacy Policy</Text>
+          {showPrivacy && (
+            (Platform.OS === 'web') ? (
+              <View style={{ marginTop: 10 }}>
+                {/* Only render raw HTML on web where div is supported */}
+                <div dangerouslySetInnerHTML={{ __html: privatePolicy }} />
+              </View>
+            ) : (
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.privacypolicies.com/live/14338ca6-e95d-4764-85ff-338ef856452b')}>
+                <Text style={[styles.settingSubtext, { marginTop: 10 }]}>View the privacy policy online</Text>
+              </TouchableOpacity>
+            )
+          )}
         </TouchableOpacity>
         <TouchableOpacity style={styles.settingItem} onPress={() => toggleHelp()}>
           <Text style={styles.settingText}>Help & Support</Text>
-          {showHelp && <Text style={styles.settingSubtext}>Email ajattek@gmail.com for assistance</Text>}
+          {showHelp && 
+          <TouchableOpacity onPress={() => Linking.openURL('mailto:courtrankhelp@gmail.com')}>
+            <Text style={[styles.settingSubtext, {marginTop: 10}]}>Email courtrankhelp@gmail.com for assistance</Text>
+          </TouchableOpacity>
+          }
         </TouchableOpacity>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
-
-      {/* <View style={styles.logoutCard}>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Sign Out</Text>
-        </TouchableOpacity>
-      </View> */}
 
     </ScrollView>
   );
@@ -151,23 +232,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
-    
   },
   header: {
-    
     padding: 20,
     alignItems: 'center',
-   
-  
-
     paddingTop: osName === 'iOS' ? 40 : 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    
     color: "#8e24aa",
-    
   },
   profileCard: {
     backgroundColor: 'white',
@@ -179,7 +253,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
-
     display: 'flex',
     flexDirection: 'row',
     justifyContent: 'flex-start',
@@ -194,18 +267,12 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     overflow: 'hidden',
-
     borderColor: "#8E24AA",
     borderWidth: 5,
-    
   },
   profileImage: {
     width: '100%',
-    height: '100%',
-
-    
-    
-    
+    height: '100%',    
   },
   profileImagePlaceholder: {
     width: '100%',
@@ -218,10 +285,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
-
-    
-  
-    
   },
   centerContent: {
     alignItems: 'center',
@@ -281,6 +344,7 @@ const styles = StyleSheet.create({
   },
   settingText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#333',
   },
   settingSubtext: {
@@ -300,30 +364,72 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   logoutButton: {
-  
     borderRadius: 8,
     alignItems: 'center',
-   
     elevation: 2,
-
-    
     marginRight: 'auto',
-    
-
-    marginTop: 100,
-    
-
+    marginTop: 10,
   },
   logoutButtonText: {
     color: '#f44336',
     fontSize: 16,
     fontWeight: 'bold',
-    
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: "#8E24AA",
     marginBottom: 15,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    // fontWeight: '100',
+    color: '#333',
+    marginBottom: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: 'white',
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    margin: 5,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  cancelButton: {
+    backgroundColor: 'grey',
+    margin: 5,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  saveText: {
+    color: 'white',
+    fontSize: 20,
+    // fontWeight: '100',
+    // marginBottom: 8,
   },
 });

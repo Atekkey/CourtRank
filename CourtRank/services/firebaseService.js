@@ -1,6 +1,6 @@
 import { 
-  collection, addDoc, getDocs, doc, updateDoc, deleteDoc,getDoc,
-  query, where, orderBy, onSnapshot,setDoc,
+  collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc,
+  query, where, orderBy, onSnapshot, setDoc, writeBatch,
   arrayUnion, arrayRemove, deleteField,
   serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer,
   limit,
@@ -16,12 +16,15 @@ import {
   User as FirebaseUser,
   getRedirectResult
 } from 'firebase/auth';
-import { db, auth } from './firebaseConfig';
+import { db, auth, functions } from './firebaseConfig';
+import { httpsCallable } from 'firebase/functions';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
 import { use, useRef, useState } from 'react';
+import { checkIsProfanityAndAlert, myPrint } from '../app/helpers';
+
 
 
 
@@ -228,6 +231,18 @@ export const createNotification = async (notificationInfo) => {
 // League Functions
 export const createLeague = async (data={}) => {
 
+  // Hash password server-side if provided
+  // if (data.password) {
+  //   try {
+  //     const hashPassword = httpsCallable(functions, 'hash_league_password');
+  //     const hash = await hashPassword({ password: data.password });
+  //     console.log('Password hashed successfully for league:', customId);
+  //   } catch (hashError) {
+  //     console.error('Failed to hash password:', hashError);
+  //     // Don't throw - league was created, just password hashing failed
+  //   }
+  // }
+  
   try {
     const customId = doc(collection(db, 'leagues')).id; // gen uniq id
     await setDoc(doc(db, 'leagues', customId), {
@@ -245,7 +260,7 @@ export const createLeague = async (data={}) => {
 
       elo_info: {},
       players: [],
-      password: data.password,
+      password: data.password || "",
     });
     // Add admin to players and elo_info
     await joinLeague(customId, data.admin_pid);
@@ -256,6 +271,28 @@ export const createLeague = async (data={}) => {
   }
 
 };
+
+// export const verifyLeaguePassword = async (league_id, password) => {
+//   try {
+//     const verifyPassword = httpsCallable(functions, 'verify_league_password');
+//     const result = await verifyPassword({ league_id, password });
+//     return result.data.valid;
+//   } catch (error) {
+//     console.error('Error verifying password:', error);
+//     return false;
+//   }
+// };
+
+// export const migrateLeaguePasswords = async () => {
+//   try {
+//     const migrate = httpsCallable(functions, 'migrate_league_passwords');
+//     const result = await migrate({});
+//     return result.data;
+//   } catch (error) {
+//     console.error('Error migrating passwords:', error);
+//     throw error;
+//   }
+// };
 
 export const getLeagues = async () => {
   try {
@@ -461,292 +498,122 @@ export const getAllMatches = async () => {
   }
 }
 
-// // useMatches hook
-// export function useMatches() {
-  
-
-//   // stateHooks:
-//   const [matchesWindow, setMatchesWindow] = useState([]);
-
-//   // page index (to get window)
-//   const page = useRef(0);
-//   const pageSize = useRef(20);
-
-//   // Map<leagueID, matches[]> allMatches
-//   const allMatches = useRef(new Map());
-
-//   // currLeague
-//   const currLeague = useRef(null);
-
-//   // !! Maybe have boolean value telling if reached end of matches for currLeague (so no more next page)
-//   const endOfMatches = useRef(false);
-//   const startOfMatches = useRef(true);
-
-//   // funcs:
-//   //  fetchMatches (Ids[]) (fetches matches given league array)
-  
-//   async function startUseMatches(leagueIDs) {
-//     // params: user league_ids
-//     // This essesntially initializes the hook with some data
-//     // Will populate allMatches map with a key for each leagueID
-
-//     // need to clear all vars using useRef first to eliminate stale data
-//     allMatches.current = new Map();
-//     page.current = 0;
-
-
-//     for (const leagueID of leagueIDs) {
-//       allMatches.set(leagueID, []);
-//     }
-
-//   }
-
-//   async function setLeague(leagueID) {
-//     // sets currLeague, fetches matches if not already fetched
-//     try {
-//       if (!allMatches.current.has(leagueID)) {
-//         throw new Error('League not found in useMatches hook');
-//       }
-
-//       currLeague.current = leagueID;
-
-//       if (allMatches.current.get(leagueID).length === 0) {
-//         // no matches fetched yet, fetch now
-//         allMatches.current.set(leagueID, await fetchLeagueMatches(leagueID));
-//       }
-
-//       const matches = allMatches.current.get(leagueID);
-
-//       // set page to 0
-//       page.current = 0;
-
-//       startOfMatches.current = true;
-
-
-//       // set matchesWindow to first page of matches
-//       // uses current page and page size to calculate window 
-//       if (matches.length <= pageSize.current) {
-//         // if less than one page of matches, set endOfMatches to true
-//         endOfMatches.current = true;
-//         setMatchesWindow(matches.slice(0, matches.length));
-//       } else {
-//         setMatchesWindow(matches.slice(0, pageSize.current));
-//       }
-//       // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
-      
-
-//     } catch (error) {
-//       throw error;
-
-//     }
-
-
-//   }
-
-//   // fetch first 40 matches for a single leagueID, checking cache first
-//   async function fetchLeagueMatches(leagueID) {
-//     const { collection, query, getDocsFromCache, getDocsFromServer, where, orderBy, db, limit, endBefore, startAfter } = await import('firebase/firestore');
-//     try {
-//       const cacheQ = query(
-//         collection(db, 'matches'),
-//         where('league_id', '==', leagueID),
-//         orderBy('timestamp', 'desc'),
-//         orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
-//       );
-//       const matches = [];
-
-//       // Check for cached matches first
-//       console.log("Checking cache for matches...");
-//       const cacheSnapshot = await getDocsFromCache(cacheQ);
-
-//       // Query is empty, no cached data exists
-//       if (cacheSnapshot.empty) {
-//         console.log("No cached matches exist, reading 2 pages from server");
-//         const serverQ = query(
-//           collection(db, 'matches'),
-//           where('league_id', '==', leagueID),
-//           orderBy('timestamp', 'desc'),
-//           orderBy('league_id', 'desc'),
-//           limit(pageSize.current * 2)
-//         );
-//         const serverSnapshot = await getDocsFromServer(serverQ);
-
-//         serverSnapshot.forEach((doc) => {
-//           matches.push({id: doc.id, ...doc.data()});
-//         });
-
-//         return matches;
-
-//       } 
-
-
-//       // Check for existing matches newer than latest cached match
-//       const updateQuery = query(
-//         collection(db, 'matches'),
-//         where('league_id', '==', leagueID),
-//         orderBy('timestamp', 'desc'),
-//         orderBy('league_id', 'desc'),
-//         endBefore(cacheSnapshot.docs[0]),
-//         limit(pageSize.current * 2) // also use limit in case of large gap between cache and server to prevent excessive reads
-//       );
-
-//       const updateSnapshot = await getDocsFromServer(updateQuery);
-
-//       if (!updateSnapshot.empty) {
-//         // updates found, add to matches
-//         updateSnapshot.forEach((doc) => {
-//           matches.push({id: doc.id, ...doc.data()});
-//         });
-
-//         if (updateSnapshot.docs.length >= pageSize * 2) {
-//           // assume stale cache, just return updates
-//           return matches;
-//         } 
-//       }
-
-
-          
-//       // updates connect to cache, include cached data
-//       cacheSnapshot.forEach((doc) => {
-//         matches.push({id: doc.id, ...doc.data()});
-//       });
-
-
-
-//       // if < 2 pages of matches exist, check for older matches
-//       // just an edge case if matches were cached, then some older matches were deleted from cache 
-//       if (matches.length < pageSize * 2) {
-//         const gapQuery = query(
-//           collection(db, 'matches'),
-//           where('league_id', '==', leagueID),
-//           orderBy('timestamp', 'desc'),
-//           orderBy('league_id', 'desc'),
-//           startAfter(cacheSnapshot.docs[cacheSnapshot.docs.length - 1]),
-//           limit((pageSize * 2) - matches.length)
-//         );
-
-//         const gapSnapshot = await getDocsFromServer(gapQuery);
-//         if (!gapSnapshot.empty) {
-//           // gap exists, add gap to matches to total 2 pages worth of matches
-//           gapSnapshot.forEach((doc) => {
-//             matches.push({id: doc.id, ...doc.data()});
-//           });
-
-//         }
-//       }
-
-//       return matches;
-            
-
-//   } catch (error) {
-//       throw error;
-//   }
-// }
-
-  
-
- 
-//   // nextPage()
-//   async function nextPage() {
-//     try {
-//       // needs to query next next page from server using start after functionality (if matches array is >= 40 and !endOfMatches)
-//       // if matches exist after current window
-//         // setCurrPage++
-//         // if no matches exist after new window, set endOfMatches(true)
-//         // update to new window (mindful if < 20 exist in window)
-      
-//       const matches = allMatches.current.get(currLeague.current);
-
-//       const windowEnd = (page.current + 1) * pageSize.current;
-
-//       if (!endOfMatches.current) {
-        
-//         // first try to slide window since new page should already be loaded (always one extra ready)
-//         if (matches.length > windowEnd) {
-//           // matches exist after current window, safe to shift window
-//           page.current = page.current + 1;
-
-//           // set matches window, using Math.min in case of < pageSize new matches
-//           setMatchesWindow(matches.slice(page.current * pageSize.current, 
-//             Math.min((page.current + 1) * pageSize.current), matches.length));
-
-//           if (page.current > 0) {
-//             startOfMatches.current = false;
-//           }
-          
-
-//         }
-
-//         // only query if at end of matches array, so a backup page is needed
-//         const newWindowEnd = (page.current + 1) * pageSize.current;
-
-//         if (matches.length <= newWindowEnd) {
-//           // then query for next page of matches
-//           const q = query(
-//             collection(db, 'matches'),
-//             where('league_id', '==', currLeague.current),
-//             orderBy('timestamp', 'desc'),
-//             orderBy('league_id', 'desc'), // ordering by league_id also to ensure deterministic ordering in case of equal timestamps
-//             startAfter(matches[matches.length - 1].timestamp, matches[matches.length - 1].league_id),
-//             limit(pageSize.current)
-//           );
-
-
-//           const querySnapshot = await getDocsFromServer(q);
-
-//           // if snaphot empty, this is end of matches
-//           if (querySnapshot.empty) {
-//             endOfMatches.current = true;
-//           }
-
-
-//           // update allMatches map with querySnapshot
-//           querySnapshot.forEach((doc) => {
-//             matches.push({id: doc.id, ...doc.data()});
-//           });
-          
-//           allMatches.current.set(currLeague.current, matches);
-
-//         }
-//       } else {
-//         console.log("End of matches reached, cannot go to next page");
-//       }
-
-
-//     } catch (error) {
-//       throw error;
-//     }
-//   }
-//   // prevPage()
-
-//   async function prevPage() {
-//     try {
-//       if (startOfMatches.current) {
-//         console.log("Start of matches reached, cannot go to previous page");
-//         return;
-//       }
-
-//       // decrement page number
-//       page.current = page.current - 1;
-
-//       if (endOfMatches.current) {
-//         // if at endOfMatches, then going back means we are no longer at end
-//         endOfMatches.current = false;
-//       }
-
-//       // set new window based on page number
-//       setMatchesWindow(allMatches.get(currLeague.current).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
-
-//       // check if start of pages
-//       if (page.current < 1) {
-//         startOfMatches.current = true;
-//       }
-
-//     } catch (error) {
-//       throw error;
-//     }
-//   }
-
-//   return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatches.current, startOfMatches: startOfMatches.current };
-
-// }
+// Date
+export const updateLeagueEndDate = async (leagueId, endDate) => {
+  try {
+    if (!leagueId) {
+      console.error('League ID is required');
+      return false;
+    }
+
+    const leagueRef = doc(db, 'leagues', leagueId);
+    
+    const leagueSnap = await getDoc(leagueRef);
+    if (!leagueSnap.exists()) {
+      console.error('League not found');
+      return false;
+    }
+
+    await updateDoc(leagueRef, {
+      league_end_date: endDate,
+      updated_at: new Date()
+    });
+
+    console.log('League end date updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating league end date:', error);
+    return false;
+  }
+};
+
+export const removeLeagueEndDate = async (leagueId) => {
+  return await updateLeagueEndDate(leagueId, null);
+};
+
+// Update League Info (name, description, location)
+export const updateLeagueInfo = async (leagueId, updates) => {
+  try {
+    if (!leagueId) {
+      console.error('League ID is required');
+      return false;
+    }
+
+    const leagueRef = doc(db, 'leagues', leagueId);
+
+    const leagueSnap = await getDoc(leagueRef);
+    if (!leagueSnap.exists()) {
+      console.error('League not found');
+      return false;
+    }
+
+    // Only update fields that are provided
+    const updateData = { updated_at: new Date() };
+    if (updates.league_name !== undefined) updateData.league_name = updates.league_name;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.location !== undefined) updateData.location = updates.location;
+
+    await updateDoc(leagueRef, updateData);
+
+    console.log('League info updated successfully');
+    return true;
+  } catch (error) {
+    console.error('Error updating league info:', error);
+    return false;
+  }
+};
+
+// Update User
+export const updateUserNames = async (userId, first, last) => {
+  if (checkIsProfanityAndAlert(first) || checkIsProfanityAndAlert(last)) {
+    return false;
+  }
+  try {
+    if (!userId) {
+      myPrint('User ID is Null', "Error");
+      return false;
+    }
+
+    const userRef = doc(db, 'players', userId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) {
+      myPrint('User Not found', "Error");
+      return false;
+    }
+
+    const batch = writeBatch(db);
+
+    batch.update(userRef, {
+      first_name: first,
+      last_name: last,
+    });
+
+    const q = query(
+      collection(db, 'leagues'),
+      where('players', 'array-contains', userId)
+    );
+    const leaguesSnapshot = await getDocs(q);
+
+    leaguesSnapshot.forEach(leagueDoc => {
+      const leagueRef = doc(db, 'leagues', leagueDoc.id);
+      const data = leagueDoc.data() || {};
+      const elo_info = data.elo_info || {};
+
+      if (!(elo_info[userId])) {
+        elo_info[userId] = { first_name: first, last_name: last };
+      } else {
+        elo_info[userId].first_name = first;
+        elo_info[userId].last_name = last;
+      }
+
+      batch.update(leagueRef, { elo_info });
+    });
+
+    await batch.commit();
+
+    return true;
+  } catch (error) {
+    console.error('Error updating Users:', error);
+    return false;
+  }
+};
