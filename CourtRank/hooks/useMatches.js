@@ -21,8 +21,6 @@ export function useMatches() {
   const currLeague = useRef(null);
 
   // !! Maybe have boolean value telling if reached end of matches for currLeague (so no more next page)
-  // const [endOfMatches, setEndOfMatches] = useState(false);
-  // const [startOfMatches, setStartOfMatches] = useState(true);
 
   // useRef + useState combo to have both mutable ref and state trigger
   const endOfMatches = useRef(false);
@@ -42,9 +40,7 @@ export function useMatches() {
   }
 
 
-// !!! THOUGHTS
-// If duplicates are within the same page, something weird is happening
-// but if they are between pages, it is an issue with firebase pagination and startAfter queries
+
   const checkForDupeIDs = () => {
     const matches = allMatches.current.get(currLeague.current);
     if (!matches || matches.length === 0) {
@@ -100,20 +96,16 @@ export function useMatches() {
     // need to clear all vars using useRef first to eliminate stale data
     allMatches.current = new Map();
     page.current = 0;
-    // setEndOfMatches(false);
-    // setStartOfMatches(true);
+
     toggleEndofMatches(false);
     toggleStartOfMatches(true);
-    
-    // endOfMatches.current = false;
-    // startOfMatches.current = true;
 
 
     for (const leagueID of leagueIDs) {
       allMatches.current.set(leagueID, []);
     }
 
-    console.log("useMatches hook initialized with leagues: ", leagueIDs);
+    console.log("useMatches hook initialized with leagues");
 
   }
 
@@ -137,32 +129,19 @@ export function useMatches() {
       // set page to 0
       page.current = 0;
 
-      // startOfMatches.current = true;
       toggleStartOfMatches(true);
-      // setStartOfMatches(true);
-
-      
-
 
       // set matchesWindow to first page of matches
       // uses current page and page size to calculate window 
       if (matches.length <= pageSize.current) {
         // if less than one page of matches, set endOfMatches to true
-        console.log("useMatches: less than one page of matches, setting endOfMatches to true");
-        // endOfMatches.current = true;
         toggleEndofMatches(true);
-        // setEndOfMatches(true);
         setMatchesWindow(matches.slice(0, matches.length));
       } else {
-        console.log("useMatches: setting matches window to first page");
-        // endOfMatches.current = false;
         toggleEndofMatches(false);
-        // setEndOfMatches(false);
         setMatchesWindow(matches.slice(0, pageSize.current));
       }
-      // setMatchesWindow(allMatches.current.get(leagueID).slice(page.current * pageSize.current, (page.current + 1) * pageSize.current));
       
-      console.log("useMatches: league set with window size ", matchesWindow.length);
 
     } catch (error) {
       throw error;
@@ -175,7 +154,6 @@ export function useMatches() {
   // fetch first 40 matches for a single leagueID, checking cache first
   async function fetchLeagueMatches(leagueID) {
     console.log("useMatches: fetching matches for league ", leagueID);
-    // const { collection, query, getDocsFromCache, getDocsFromServer, where, orderBy, db, limit, endBefore, startAfter } = await import('firebase/firestore');
     try {
       const cacheQ = query(
         collection(db, 'matches'),
@@ -308,15 +286,12 @@ export function useMatches() {
           // set matches window, using Math.min in case of < pageSize new matches
           setMatchesWindow(matches.slice(page.current * pageSize.current, 
             Math.min((page.current + 1) * pageSize.current), matches.length));
-            //!! maybe set endOfMatches to false here? just to prevent user from clicking fast and breaking
 
           if (page.current > 0) { // this might be redundant but is careful
             toggleStartOfMatches(false);
-            // startOfMatches.current = false;
-            // setStartOfMatches(false);
           }
           
-          console.log("useMatches: moved to next page, current page ", page.current);
+         
         }
 
         // only query if at end of matches array, so a backup page is needed
@@ -324,8 +299,8 @@ export function useMatches() {
 
 
         if (matches.length <= newWindowEnd) {
-                  console.log("useMatches: fetching next page from server...");
-          console.log("last match : " , matches[matches.length - 1]);
+          console.log("useMatches: fetching next page from server...");
+         
           // then query for next page of matches
           const q = query(
             collection(db, 'matches'),
@@ -341,13 +316,8 @@ export function useMatches() {
 
           // if snaphot empty, this is end of matches
           if (querySnapshot.empty) {
-            console.log("useMatches, nextPage: reached end of matches from server");
             toggleEndofMatches(true);
-            validateMapAgainstAllMatches(currLeague.current);
-            // endOfMatches.current = true;
-            // setEndOfMatches(true);
 
-            console.log("useMatches: endOfMatches = ", endOfMatches);
           }
 
 
@@ -357,8 +327,6 @@ export function useMatches() {
           });
           
           allMatches.current.set(currLeague.current, matches);
-          const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-          // await delay(3000); // small delay to ensure state updates
 
         }
       } else {
@@ -385,8 +353,6 @@ export function useMatches() {
       if (endOfMatches.current) {
         // if at endOfMatches, then going back means we are no longer at end
         toggleEndofMatches(false);
-        // endOfMatches.current = false;
-        // setEndOfMatches(false);
       }
 
       // set new window based on page number
@@ -395,8 +361,6 @@ export function useMatches() {
       // check if start of pages
       if (page.current < 1) {
         toggleStartOfMatches(true);
-        // startOfMatches.current = true;
-        // setStartOfMatches(true);
       }
 
     } catch (error) {
@@ -404,6 +368,7 @@ export function useMatches() {
     }
   }
 
+  // This only exists for testing purposes
   // Query all matches for a league and compare with map
   async function validateMapAgainstAllMatches(leagueID) {
     console.log("useMatches: validating map against all matches for league", leagueID);
