@@ -2,7 +2,11 @@ import {
   collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc,
   query, where, orderBy, onSnapshot, setDoc, writeBatch,
   arrayUnion, arrayRemove, deleteField,
-  serverTimestamp 
+  serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer,
+  limit,
+  endBefore,
+  startAfter,
+  Query
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
@@ -18,6 +22,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { makeRedirectUri } from 'expo-auth-session';
+import { use, useRef, useState } from 'react';
 import { checkIsProfanityAndAlert, myPrint } from '../app/helpers';
 
 
@@ -25,12 +30,20 @@ import { checkIsProfanityAndAlert, myPrint } from '../app/helpers';
 
 // Sign in with Google
 
+const isTestEnv = process.env.NODE_ENV === "test";
+
 // *NOTE: These env variables will not process on web, only through expo
-const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = Constants.expoConfig.extra;
+
+// This is only required to test "useMatchesEmulated.test.js" in test env
+const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = isTestEnv ? 
+  {WEB_CLIENT_ID: "FAKE_WEB_CLIENT_ID", IOS_CLIENT_ID: "FAKE_IOS_CLIENT_ID", ANDROID_CLIENT_ID: "FAKE_ANDROID_CLIENT_ID"} 
+  : Constants.expoConfig.extra;
+
+// const { WEB_CLIENT_ID, IOS_CLIENT_ID, ANDROID_CLIENT_ID } = Constants.expoConfig.extra;
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectUri = makeRedirectUri({
+const redirectUri = isTestEnv ? "TestRedirectUri" :  makeRedirectUri({
   scheme: 'courtrank',
   path: 'redirect'
 });
@@ -413,10 +426,72 @@ export const getAllMatches = async () => {
       orderBy('timestamp', 'desc')
     );
     const matches = [];
-    const querySnapshot = await getDocs(q);
+
+    // Check for cached matches first
+    console.log("Checking cache for matches...");
+    let querySnapshot = await getDocsFromCache(q);
+    let updateDocs = [];
+
+    // Query is empty, no cached data exists
+    if (querySnapshot.empty) {
+      console.log("No cached matches exist, reading from server");
+      querySnapshot = await getDocsFromServer(q);
+    } else {
+      console.log("Cached matches found, checking for updates from server...");
+      
+      // Latest local timestamp
+      const localMaxTimestamp = querySnapshot.docs[0].data().timestamp;
+
+      // Identify local match docs at timestamp
+      const latestLocalDocs = querySnapshot.docs
+        .filter(doc => doc.data().timestamp.isEqual(localMaxTimestamp))
+        .map(doc => doc.id);
+
+      // Cached data exist, but we want to check for new data
+      const updateQ = query(
+        collection(db, 'matches'),
+        where("timestamp", ">=", localMaxTimestamp), 
+        orderBy('timestamp', 'desc')
+      );
+
+      const updateSnapshot = await getDocsFromServer(updateQ);
+
+      // Remove latestLocalDocs from updateSnapshot
+      updateDocs = updateSnapshot.docs.filter(
+        doc => !latestLocalDocs.includes(doc.id)
+      );
+
+      if (!updateDocs.length) {
+        console.log("No updates found");
+      }
+
+    }
+
+    
+
+    console.log("Main query size: ", querySnapshot.docs.length);
+    console.log("Update query size : ", updateDocs.length);
+
+
+    // Add updated data to matches array
+    if (updateDocs.length) {
+      console.log("Updates found, adding updates to matches...");
+
+      updateDocs.forEach((doc) => {
+        matches.push({id: doc.id, ...doc.data()});
+      });
+    }
+
+
+    // Add cached data to matches array
     querySnapshot.forEach((doc) => {
       matches.push({id: doc.id, ...doc.data()});
     });
+
+
+
+    console.log("Matches size: ", matches.length);
+
     return matches;
   } catch (error) {
     throw error;

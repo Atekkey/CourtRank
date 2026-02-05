@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
 import { osName } from 'expo-device';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useMatches } from '@/hooks/useMatches';
 import { X, Calendar, Flag, RotateCcw, Pencil } from 'lucide-react-native';
 import { myPrint, checkIsProfanityAndAlert, confirmAction } from '../helpers';
 
@@ -82,6 +83,7 @@ export default function MyLeagues() {
   // Leaderboard
   const [eloNotScore, setEloNotScore] = useState(true);
 
+  const {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches, startOfMatches} = useMatches();
   // Screen width - for responsive layout
   const { width: screenWidth } = useWindowDimensions();
   const isSmallScreen = screenWidth < 520;
@@ -92,23 +94,36 @@ export default function MyLeagues() {
     setLoading(true);
     const fetchMyLeagues = async () => {
       try {
+        console.log("[my_leagues]: user id useEffect, fetching user leagues");
         const leagues = await getUserLeagues(user?.uid);
+        console.log("[my_leagues]: fetched leagues: ", leagues);
+
+        // Initialize useMatches hook with user leagueIDs
+        startUseMatches(leagues.map(l => l.league_id));
         setMyLeagues(leagues);
       } catch (error) {
         console.error('Error fetching my leagues:', error);
+      } finally {
+        
+        setLoading(false);
       }
     };
-    fetchAllMatchHistory();
+    // fetchAllMatchHistory();
     fetchMyLeagues();
-    setLoading(false);
+    
   }, [user?.uid]);
 
+  // @TODO: Make sure to update this funciton with useMatches hook as well
   const handleRefresh = async () => {
     setLoading(true);
     try {
+      console.log("[my_leagues]: handleRefresh, fetching user leagues");
       const leagues = await getUserLeagues(user?.uid);
+
+      // Initialize useMatches hook with user leagueIDs
+      startUseMatches(leagues.map(l => l.league_id));
       setMyLeagues(leagues);
-      fetchAllMatchHistory();
+      // fetchAllMatchHistory();
     } catch (error) {
       myPrint('Error fetching my leagues:', "Error");
     }
@@ -120,6 +135,7 @@ export default function MyLeagues() {
       if (Platform.OS === 'web') {
         const proceed = window.confirm(`Leave ${leagueName}?`);
         if (!proceed) return;
+        console.log("[my_leagues]: handle leave league");
         await leaveLeague(leagueId, user?.uid);
         handleRefresh();
       } else {
@@ -133,6 +149,7 @@ export default function MyLeagues() {
               style: 'destructive',
               onPress: async () => {
                 try {
+                  console.log("[my_leagues]: await leave league");
                   await leaveLeague(leagueId, user?.uid);
                   handleRefresh();
                 } catch (error) {
@@ -447,6 +464,7 @@ export default function MyLeagues() {
     }
     console.log("Three ");
     try {
+      console.log("[my_leagues]: await create notification");
       await createNotification({
         admin_name: `${userInfo.first_name} ${userInfo.last_name}`,
         league_name: curLeague.league_name,
@@ -564,6 +582,7 @@ export default function MyLeagues() {
     }
 
     try {
+      console.log("[my_leagues]: await createLeague");
       await createLeague(newLeague);
       
       setShowCreateModal(false);
@@ -793,6 +812,7 @@ export default function MyLeagues() {
       processed: false,
     };
 
+    console.log("[my_leagues]: await creating match");
     const result = await createMatch(matchData);
     if (!result) {
       if (Platform.OS === 'web') {
@@ -976,12 +996,16 @@ export default function MyLeagues() {
 
   // Match FXNs
   const matchPressed = (league) => {
-    setCurLeague(league);
+    // setCurLeague(league);
+    setLeague(league.league_id); // useMatches hook
     setShowMatchModal(true);
   };
 
   const fetchAllMatchHistory = async () => {
+
+    // implement useMatches hook
     try {
+      console.log("[my_leagues]: Fetching all match history, await getAllMatches");
       const matches = await getAllMatches();
       setMatchHistory(matches);
     } catch (error) {
@@ -995,6 +1019,49 @@ export default function MyLeagues() {
     return playerNames;
   };
 
+  // new matchMap using useMatches hook and matches window
+  const matchMap = (matchesWindow.length > 0) ? ((matchesWindow).map(matchInfo => {
+    // if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
+    const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    return (
+      <View key={matchInfo.id} style={[styles_match.matchContainer]}>
+{/* <Text style={styles_match.matchDate}>ID: {matchInfo.id}</Text> */}
+        
+        
+          <View style={[styles_match.card, styles_match.winnerCard]}>
+            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text> */}
+
+            {getMatchPlayers(matchInfo.win_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+        
+
+          <View style={[styles_match.card, styles_match.dateCard]}>
+            <Text style={styles_match.matchDate}>{date}</Text>
+            <Text style={styles_match.vsText}>vs</Text>
+            
+          </View>
+
+          <View style={[styles_match.card, styles_match.loserCard]}>
+            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text> */}
+              {getMatchPlayers(matchInfo.loss_team).map((name, index) => (
+              <Text key={index} style={[styles_match.names, 
+                { fontSize: Math.max(16 - index * 2, 12) }
+              ]}>{name}</Text>
+            ))}
+          </View>
+
+    
+
+      </View> 
+    );
+  })) : null;
+
+  // Old matchMap using all matchHistory 
+  /*
   const rollBackPressed = async (matchId: string) => {
     if (!matchId) { return; }
 
@@ -1022,7 +1089,7 @@ export default function MyLeagues() {
         
         
           <View style={[styles_match.card, styles_match.winnerCard]}>
-            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.win_team).join(", ")}</Text> */}
+           
 
             {getMatchPlayers(matchInfo.win_team).map((name, index) => (
               <Text key={index} style={[styles_match.names, 
@@ -1046,7 +1113,7 @@ export default function MyLeagues() {
           </View>
 
           <View style={[styles_match.card, styles_match.loserCard]}>
-            {/* <Text style={styles_match.names}>{getMatchPlayers(matchInfo.loss_team).join(", ")}</Text> */}
+
               {getMatchPlayers(matchInfo.loss_team).map((name, index) => (
               <Text key={index} style={[styles_match.names, 
                 { fontSize: Math.max(16 - index * 2, 12) }
@@ -1059,6 +1126,19 @@ export default function MyLeagues() {
       </View> 
     );
   })) : null;
+  */
+
+  async function onNextPage() {
+    setLoading(true);
+    await nextPage();
+    setLoading(false);
+  }
+
+  async function onPrevPage() {
+    setLoading(true);
+    await prevPage();
+    setLoading(false);
+  }
 
   const matchHistoryModal = (
     <Modal
@@ -1075,6 +1155,23 @@ export default function MyLeagues() {
               onPress={() => setShowMatchModal(false)}
             >
               <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          {/* page buttons */}
+          <View style={styles.pageButtonContainer}>
+            <TouchableOpacity style={[styles.pageButton, startOfMatches && styles.buttonDisabled, loading && styles.buttonLoading]}
+            onPress={() => (startOfMatches || loading) ? null : onPrevPage()}>
+              <Text>Prev</Text>
+            </TouchableOpacity>
+            <Text style={styles.datePage}>
+              {matchesWindow.length > 0 ?
+                `${matchesWindow[0].timestamp.toDate().toLocaleDateString().slice(0,-5)} - ${matchesWindow[matchesWindow.length -1].timestamp.toDate().toLocaleDateString().slice(0,-5)}`
+                :
+                "No Matches"}
+            </Text>
+            <TouchableOpacity style={[styles.pageButton, endOfMatches && styles.buttonDisabled, loading && styles.buttonLoading]}
+            onPress={() => (endOfMatches || loading) ? null : onNextPage()}>
+              <Text>Next</Text>
             </TouchableOpacity>
           </View>
 
@@ -2382,6 +2479,38 @@ const styles = StyleSheet.create({
   selectedRow: {
     backgroundColor: '#d0f0d0', 
   },
+  pageButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+
+    // borderColor: 'red',
+    // borderWidth: 2,
+  },
+  pageButton: {
+    backgroundColor: '#ff9900',
+    padding: 10,
+    borderRadius: 10,
+    flex: 1,
+    alignItems: 'center',
+
+  },
+  buttonLoading: {
+    backgroundColor: '#ff9900ad',
+  },
+  buttonDisabled: {
+    backgroundColor: '#cccccc',
+  },
+  datePage: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    flex: 5,
+    
+    textAlign: 'center',
+  },
+
   flagRed: {
     color: '0xff0000',
     padding: 5,
@@ -2452,6 +2581,9 @@ const styles_match = StyleSheet.create({
     
   },
   dateCard: {
+    flex: 1.25,
+
+    
     flex: 1,    
   },
   teamName: {
@@ -2460,7 +2592,7 @@ const styles_match = StyleSheet.create({
     color: 'white',
   },
   names: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'black',
     fontWeight: '700',
 

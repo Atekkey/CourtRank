@@ -1,8 +1,10 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, initializeFirestore, setLogLevel, connectFirestoreEmulator } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 // Note: Analytics doesn't work in React Native, removed getAnalytics
+
+
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,12 +17,19 @@ const firebaseConfig = {
 };
 
 
+
+// enable debug logs, for database read/write monitoring
+// setLogLevel("debug");
+
 // Initialize Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+
 
 // Initialize services you'll actually use
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app);
+
 
 export default app;
