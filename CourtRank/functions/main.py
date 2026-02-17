@@ -52,83 +52,98 @@ def calculateK(teamA = None, teamB = None, baseK=40):
     except:
         return baseK
 
-@firestore_fn.on_document_created(document="matches/{matchId}")
+@firestore_fn.on_document_created(
+    document="matches/{matchId}",
+    timeout_sec=300,
+    memory=256
+)
 def on_match_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot | None]) -> None:
-
     if not event.data:
         return
+
     match_data = event.data.to_dict()
-    if match_data.get("processed", False): # if not found gives false
+    if match_data.get("processed", False):
         return
-    
+
     leagueID = match_data["league_id"]
     league_k_factor = match_data.get("league_k_factor", 40)
-    
-    winTeamMap = match_data["win_team"]  # This holds PIDS -> {elo:#, ...}
-    loseTeamMap = match_data["loss_team"]  # This holds PIDS -> {elo:#, ...}
-    
-    winPairs = [[pair[0], pair[1]["elo"]] for pair in winTeamMap.items()]  # [[pid, elo], [pid,elo]]
-    losePairs = [[pair[0], pair[1]["elo"]] for pair in loseTeamMap.items()]  # [[pid, elo], [pid,elo]]
-    
+
+    winTeamMap = match_data["win_team"]
+    loseTeamMap = match_data["loss_team"]
+
+    winPairs = [[pair[0], pair[1]["elo"]] for pair in winTeamMap.items()]
+    losePairs = [[pair[0], pair[1]["elo"]] for pair in loseTeamMap.items()]
+
     winInput = [pair[1] for pair in winPairs]
     loseInput = [pair[1] for pair in losePairs]
-    
+
     avgWin, avgLose = sum(winInput) / len(winInput), sum(loseInput) / len(loseInput)
 
     new_k_factor = calculateK(winInput, loseInput, baseK=league_k_factor)
-
     winOutput, loseOutput = teamUpdateRating(winInput, loseInput, new_k_factor)
-    
+
     db = firestore.client()
-    doc_ref = db.collection("leagues").document(leagueID)
-    league_doc = doc_ref.get()
-    
-    if not league_doc.exists:
-        print(f"League document {leagueID} does not exist")
-        return
-    
-    league_data = league_doc.to_dict()
-    
-    if "elo_info" not in league_data:
-        league_data["elo_info"] = {}
-    
-    for i in range(len(winPairs)):
-        pid = winPairs[i][0]
-        newElo = int(winOutput[i])
-        
-        if pid not in league_data["elo_info"]:
-            print(f"{pid} WINNER NOT IN LEAGUE")
-        
-        league_data["elo_info"][pid]["elo"] = newElo
-        league_data["elo_info"][pid]["wins"] += 1
-        
-        if league_data["elo_info"][pid].get("opp_elo_sum") is None:
-            league_data["elo_info"][pid]["opp_elo_sum"] = avgLose
-        else:
-            league_data["elo_info"][pid]["opp_elo_sum"] += avgLose
-    
-    for i in range(len(losePairs)):
-        pid = losePairs[i][0]
-        newElo = int(loseOutput[i])
-        
-        if pid not in league_data["elo_info"]:
-            print(f"{pid} LOSER NOT IN LEAGUE")
-        
-        league_data["elo_info"][pid]["elo"] = newElo
-        league_data["elo_info"][pid]["losses"] += 1
-        
-        if league_data["elo_info"][pid].get("opp_elo_sum") is None:
-            league_data["elo_info"][pid]["opp_elo_sum"] = avgWin
-        else:
-            league_data["elo_info"][pid]["opp_elo_sum"] += avgWin
-    
-    
-    event.data.reference.update({"processed": True})
+    match_ref = event.data.reference
+    league_ref = db.collection("leagues").document(leagueID)
 
-    doc_ref.set(league_data)
+    @firestore.transactional
+    def update_in_transaction(transaction):
+        # Re-check processed status inside transaction for idempotency
+        match_snapshot = match_ref.get(transaction=transaction)
+        if match_snapshot.to_dict().get("processed", False):
+            return False
+
+        league_doc = league_ref.get(transaction=transaction)
+        if not league_doc.exists:
+            print(f"League document {leagueID} does not exist")
+            return False
+
+        league_data = league_doc.to_dict()
+        if "elo_info" not in league_data:
+            league_data["elo_info"] = {}
+
+        for i in range(len(winPairs)):
+            pid = winPairs[i][0]
+            newElo = int(winOutput[i])
+
+            if pid not in league_data["elo_info"]:
+                print(f"{pid} WINNER NOT IN LEAGUE")
+                continue
+
+            league_data["elo_info"][pid]["elo"] = newElo
+            league_data["elo_info"][pid]["wins"] += 1
+
+            if league_data["elo_info"][pid].get("opp_elo_sum") is None:
+                league_data["elo_info"][pid]["opp_elo_sum"] = avgLose
+            else:
+                league_data["elo_info"][pid]["opp_elo_sum"] += avgLose
+
+        for i in range(len(losePairs)):
+            pid = losePairs[i][0]
+            newElo = int(loseOutput[i])
+
+            if pid not in league_data["elo_info"]:
+                print(f"{pid} LOSER NOT IN LEAGUE")
+                continue
+
+            league_data["elo_info"][pid]["elo"] = newElo
+            league_data["elo_info"][pid]["losses"] += 1
+
+            if league_data["elo_info"][pid].get("opp_elo_sum") is None:
+                league_data["elo_info"][pid]["opp_elo_sum"] = avgWin
+            else:
+                league_data["elo_info"][pid]["opp_elo_sum"] += avgWin
+
+        # Atomic update - both succeed or both fail
+        transaction.update(match_ref, {"processed": True})
+        transaction.set(league_ref, league_data)
+        return True
+
+    transaction = db.transaction()
+    update_in_transaction(transaction)
 
 
-@https_fn.on_call()
+@https_fn.on_call(timeout_sec=300, memory=256)
 def rollback_match(req: https_fn.CallableRequest):
     """
     Rollback a processed match, undoing all ELO changes and win/loss updates.
@@ -192,49 +207,58 @@ def rollback_match(req: https_fn.CallableRequest):
     new_k_factor = calculateK(winInput, loseInput, baseK=league_k_factor)
     changeA, changeB = teamRatingChange(winInput, loseInput, new_k_factor)
 
-    # Get the league document
     league_ref = db.collection("leagues").document(leagueID)
-    league_doc = league_ref.get()
 
-    if not league_doc.exists:
-        raise https_fn.HttpsError(
-            code=https_fn.FunctionsErrorCode.NOT_FOUND,
-            message=f"League {leagueID} not found"
-        )
+    @firestore.transactional
+    def rollback_in_transaction(transaction):
+        # Re-check match status inside transaction
+        match_snapshot = match_ref.get(transaction=transaction)
+        current_match_data = match_snapshot.to_dict()
+        if not current_match_data.get("processed", False):
+            return False  # Already rolled back
 
-    league_data = league_doc.to_dict()
+        league_doc = league_ref.get(transaction=transaction)
+        if not league_doc.exists:
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.NOT_FOUND,
+                message=f"League {leagueID} not found"
+            )
 
-    if "elo_info" not in league_data:
-        raise https_fn.HttpsError(
-            code=https_fn.FunctionsErrorCode.FAILED_PRECONDITION,
-            message="League has no elo_info"
-        )
+        league_data = league_doc.to_dict()
+        if "elo_info" not in league_data:
+            raise https_fn.HttpsError(
+                code=https_fn.FunctionsErrorCode.FAILED_PRECONDITION,
+                message="League has no elo_info"
+            )
 
-    # Reverse winner changes
-    for i in range(len(winPairs)):
-        pid = winPairs[i][0]
-        if pid in league_data["elo_info"]:
-            # Subtract the ELO change that was added
-            league_data["elo_info"][pid]["elo"] -= changeA[i]
-            league_data["elo_info"][pid]["wins"] = max(0, league_data["elo_info"][pid].get("wins", 1) - 1)
-            # Subtract opponent average from opp_elo_sum
-            if league_data["elo_info"][pid].get("opp_elo_sum") is not None:
-                league_data["elo_info"][pid]["opp_elo_sum"] -= avgLose
+        # Reverse winner changes
+        for i in range(len(winPairs)):
+            pid = winPairs[i][0]
+            if pid in league_data["elo_info"]:
+                league_data["elo_info"][pid]["elo"] -= changeA[i]
+                league_data["elo_info"][pid]["wins"] = max(0, league_data["elo_info"][pid].get("wins", 1) - 1)
+                if league_data["elo_info"][pid].get("opp_elo_sum") is not None:
+                    league_data["elo_info"][pid]["opp_elo_sum"] -= avgLose
 
-    # Reverse loser changes
-    for i in range(len(losePairs)):
-        pid = losePairs[i][0]
-        if pid in league_data["elo_info"]:
-            # Subtract the (negative) ELO change that was applied
-            league_data["elo_info"][pid]["elo"] -= changeB[i]
-            league_data["elo_info"][pid]["losses"] = max(0, league_data["elo_info"][pid].get("losses", 1) - 1)
-            # Subtract opponent average from opp_elo_sum
-            if league_data["elo_info"][pid].get("opp_elo_sum") is not None:
-                league_data["elo_info"][pid]["opp_elo_sum"] -= avgWin
+        # Reverse loser changes
+        for i in range(len(losePairs)):
+            pid = losePairs[i][0]
+            if pid in league_data["elo_info"]:
+                league_data["elo_info"][pid]["elo"] -= changeB[i]
+                league_data["elo_info"][pid]["losses"] = max(0, league_data["elo_info"][pid].get("losses", 1) - 1)
+                if league_data["elo_info"][pid].get("opp_elo_sum") is not None:
+                    league_data["elo_info"][pid]["opp_elo_sum"] -= avgWin
 
-    # Update league and mark match as not processed
-    league_ref.set(league_data)
-    match_ref.update({"processed": False, "rolled_back": True})
+        # Atomic update - both succeed or both fail
+        transaction.set(league_ref, league_data)
+        transaction.update(match_ref, {"processed": False, "rolled_back": True})
+        return True
+
+    transaction = db.transaction()
+    success = rollback_in_transaction(transaction)
+
+    if not success:
+        return {"success": False, "message": f"Match {match_id} was already rolled back"}
 
     return {"success": True, "message": f"Match {match_id} has been rolled back"}
 
