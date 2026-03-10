@@ -1023,6 +1023,9 @@ export default function MyLeagues() {
   const matchMap = (matchesWindow.length > 0) ? ((matchesWindow).map(matchInfo => {
     // if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
     const date = matchInfo.timestamp.toDate().toLocaleDateString().slice(0,-5);
+    const playerWon = user?.uid && String(user.uid) in matchInfo.win_team;
+    const isProcessed = matchInfo.processed;
+    
     return (
       <View key={matchInfo.id} style={[styles_match.matchContainer]}>
 {/* <Text style={styles_match.matchDate}>ID: {matchInfo.id}</Text> */}
@@ -1043,6 +1046,11 @@ export default function MyLeagues() {
             <Text style={styles_match.matchDate}>{date}</Text>
             <Text style={styles_match.vsText}>vs</Text>
             
+                        {(playerWon && (isProcessed)) && (
+            <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
+              <RotateCcw size={24} color="red" />
+            </TouchableOpacity>)
+            }
           </View>
 
           <View style={[styles_match.card, styles_match.loserCard]}>
@@ -1060,8 +1068,8 @@ export default function MyLeagues() {
     );
   })) : null;
 
-  // Old matchMap using all matchHistory 
-  /*
+ 
+ 
   const rollBackPressed = async (matchId: string) => {
     if (!matchId) { return; }
 
@@ -1077,6 +1085,10 @@ export default function MyLeagues() {
       }
     }
   };
+
+   // Old matchMap using all matchHistory 
+
+   /*
   
   const matchMap = (matchHistory.length > 0 && curLeague) ? ((matchHistory).map(matchInfo => {
     if (matchInfo?.league_id !== curLeague?.league_id) { return null; }
