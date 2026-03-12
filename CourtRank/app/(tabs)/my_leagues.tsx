@@ -83,7 +83,7 @@ export default function MyLeagues() {
   // Leaderboard
   const [eloNotScore, setEloNotScore] = useState(true);
 
-  const {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches, startOfMatches} = useMatches();
+  const {matchesWindow, startUseMatches, setLeague, nextPage, prevPage,resetLeague, endOfMatches, startOfMatches} = useMatches();
   // Screen width - for responsive layout
   const { width: screenWidth } = useWindowDimensions();
   const isSmallScreen = screenWidth < 520;
@@ -94,9 +94,9 @@ export default function MyLeagues() {
     setLoading(true);
     const fetchMyLeagues = async () => {
       try {
-        console.log("[my_leagues]: user id useEffect, fetching user leagues");
+        // console.log("[my_leagues]: user id useEffect, fetching user leagues");
         const leagues = await getUserLeagues(user?.uid);
-        console.log("[my_leagues]: fetched leagues: ", leagues);
+        // console.log("[my_leagues]: fetched leagues: ", leagues);
 
         // Initialize useMatches hook with user leagueIDs
         startUseMatches(leagues.map(l => l.league_id));
@@ -1047,7 +1047,7 @@ export default function MyLeagues() {
             <Text style={styles_match.vsText}>vs</Text>
             
                         {(playerWon && (isProcessed)) && (
-            <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
+            <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id, matchInfo.league_id)} style={styles_match.rollbackButton}>
               <RotateCcw size={24} color="red" />
             </TouchableOpacity>)
             }
@@ -1070,7 +1070,7 @@ export default function MyLeagues() {
 
  
  
-  const rollBackPressed = async (matchId: string) => {
+  const rollBackPressed = async (matchId: string, leagueId: string) => {
     if (!matchId) { return; }
 
     const confirmed = await confirmAction(
@@ -1081,7 +1081,7 @@ export default function MyLeagues() {
     if (confirmed) {
       const success = await handleRollback(matchId);
       if (success) {
-        handleRefresh();
+        resetLeague(leagueId, matchId); // refresh matches with useMatches hook
       }
     }
   };
