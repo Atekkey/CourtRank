@@ -5,7 +5,7 @@ import { db } from '../services/firebaseConfig';
 
 
 export function useMatches() {
-  console.log("useMatches hook initialized");
+  // console.log("useMatches hook initialized");
  
   // stateHooks:
   const [matchesWindow, setMatchesWindow] = useState([]);
@@ -50,7 +50,6 @@ export function useMatches() {
     const ids = matches.map(match => match.id);
     const idSet = new Set(ids);
 
-    // console.log("useMatches: allIds: ", ids);
 
     // If set size is less than array size, there are duplicates
     if (idSet.size < ids.length) {
@@ -70,20 +69,21 @@ export function useMatches() {
     return { hasDuplicates: false, duplicateIds: [] };
   }
 
-  useEffect(() => {
-    console.log("useMatches: endOfMatches changed to ", endOfMatches.current, endOfMatchesState);
-  }, [endOfMatchesState]);
+  // Used for testing
+  // useEffect(() => {
+  //   console.log("useMatches: endOfMatches changed to ", endOfMatches.current, endOfMatchesState);
+  // }, [endOfMatchesState]);
 
-  useEffect(() => {
-    console.log("useMatches: startOfMatches changed to ", startOfMatches.current, startOfMatchesState);
-  }, [startOfMatchesState]);
+  // useEffect(() => {
+  //   console.log("useMatches: startOfMatches changed to ", startOfMatches.current, startOfMatchesState);
+  // }, [startOfMatchesState]);
 
-  useEffect(() => {
-    const result = checkForDupeIDs();
-    if (result.hasDuplicates) {
-      console.warn("useMatches: Duplicate match IDs detected:", result.duplicateIds);
-    }
-  }, [matchesWindow]);
+  // useEffect(() => {
+  //   const result = checkForDupeIDs();
+  //   if (result.hasDuplicates) {
+  //     console.warn("useMatches: Duplicate match IDs detected:", result.duplicateIds);
+  //   }
+  // }, [matchesWindow]);
 
   // funcs:
   //  fetchMatches (Ids[]) (fetches matches given league array)
@@ -105,12 +105,12 @@ export function useMatches() {
       allMatches.current.set(leagueID, []);
     }
 
-    console.log("useMatches hook initialized with leagues");
+    // console.log("useMatches hook initialized with leagues");
 
   }
 
-  async function setLeague(leagueID) {
-    console.log("useMatches: setting league to ", leagueID);
+  async function setLeague(leagueID, forceServer = false) {
+    // console.log("useMatches: setting league to ", leagueID);
     // sets currLeague, fetches matches if not already fetched
     try {
       if (!allMatches.current.has(leagueID)) {
@@ -121,7 +121,7 @@ export function useMatches() {
 
       if (allMatches.current.get(leagueID).length === 0) {
         // no matches fetched yet, fetch now
-        allMatches.current.set(leagueID, await fetchLeagueMatches(leagueID));
+        allMatches.current.set(leagueID, await fetchLeagueMatches(leagueID, forceServer));
       }
 
       const matches = allMatches.current.get(leagueID);
@@ -152,28 +152,37 @@ export function useMatches() {
   }
 
   // fetch first 40 matches for a single leagueID, checking cache first
-  async function fetchLeagueMatches(leagueID) {
-    console.log("useMatches: fetching matches for league ", leagueID);
+  async function fetchLeagueMatches(leagueID, forceServer = false) {
+    // console.log("useMatches: fetching matches for league ", leagueID);
     try {
-      const cacheQ = query(
-        collection(db, 'matches'),
-        where('league_id', '==', leagueID),
-        orderBy('timestamp', 'desc'),
-        orderBy(documentId(), 'desc'), // ordering by documentId also to ensure deterministic ordering in case of equal timestamps
-      );
+
       const matches = [];
 
-      // Check for cached matches first
-      console.log("Checking cache for matches...");
-      const cacheSnapshot = await getDocsFromCache(cacheQ);
+      let cacheSnapshot = null;
 
+      if (!forceServer) {
+        const cacheQ = query(
+          collection(db, 'matches'),
+          where('league_id', '==', leagueID),
+          where('processed', '==', true), 
+          orderBy('timestamp', 'desc'),
+          orderBy(documentId(), 'desc'), // ordering by documentId also to ensure deterministic ordering in case of equal timestamps
+        );
+        
+
+        // Check for cached matches first
+        console.log("Checking cache for matches...");
+      
+        cacheSnapshot = await getDocsFromCache(cacheQ);
+      }
 
       // Query is empty, no cached data exists
-      if (cacheSnapshot.empty) {
+      if (!cacheSnapshot || cacheSnapshot.empty) {
         console.log("No cached matches exist, reading 2 pages from server");
         const serverQ = query(
           collection(db, 'matches'),
           where('league_id', '==', leagueID),
+          where('processed', '==', true), 
           orderBy('timestamp', 'desc'),
           orderBy(documentId(), 'desc'),
           limit(pageSize.current * 2)
@@ -184,7 +193,7 @@ export function useMatches() {
           matches.push({id: doc.id, ...doc.data()});
         });
 
-        console.log("Number of matches fetched from server: ", matches.length);
+        // console.log("Number of matches fetched from server: ", matches.length);
 
         return matches;
 
@@ -197,6 +206,7 @@ export function useMatches() {
       const updateQuery = query(
         collection(db, 'matches'),
         where('league_id', '==', leagueID),
+        where('processed', '==', true), 
         orderBy('timestamp', 'desc'),
         orderBy(documentId(), 'desc'),
         endBefore(cacheSnapshot.docs[0]),
@@ -236,6 +246,7 @@ export function useMatches() {
         const gapQuery = query(
           collection(db, 'matches'),
           where('league_id', '==', leagueID),
+          where('processed', '==', true),
           orderBy('timestamp', 'desc'),
           orderBy(documentId(), 'desc'),
           startAfter(cacheSnapshot.docs[cacheSnapshot.docs.length - 1]),
@@ -299,12 +310,13 @@ export function useMatches() {
 
 
         if (matches.length <= newWindowEnd) {
-          console.log("useMatches: fetching next page from server...");
+          // console.log("useMatches: fetching next page from server...");
          
           // then query for next page of matches
           const q = query(
             collection(db, 'matches'),
             where('league_id', '==', currLeague.current),
+            where('processed', '==', true), 
             orderBy('timestamp', 'desc'),
             orderBy(documentId(), 'desc'), // ordering by documentID also to ensure deterministic ordering in case of equal timestamps
             startAfter(matches[matches.length - 1].timestamp),
@@ -364,6 +376,48 @@ export function useMatches() {
       }
 
     } catch (error) {
+      throw error;
+    }
+  }
+
+  
+  // Resets client side league data for given leagueID, useful in case of match rollback
+  async function resetLeague(leagueID, matchID) {
+    try {
+      // console.log("useMatches: resetting league ", leagueID);
+      if (!allMatches.current.has(leagueID)) {
+        throw new Error('League not found in useMatches hook');
+      }
+
+      allMatches.current.set(leagueID, []);
+      // console.log("useMatches: client side data for league ", leagueID, ": " , allMatches.current.get(leagueID));
+      setMatchesWindow([]);
+      if (currLeague.current === leagueID) {
+        // console.log("useMatches: league data reset, resetting currLeague for league ", leagueID);
+        await setLeague(leagueID, true);
+        // await checkCacheForMatch(leagueID, matchID);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Used for testing, checks if matchID exists in cache for leagueID, returns boolean
+  async function checkCacheForMatch(leagueID, matchID) {
+    try {
+      console.log("useMatches: checking cache for match ", matchID, " in league ", leagueID);
+      const cacheQ = query(
+        collection(db, 'matches'),
+        //where('league_id', '==', leagueID),
+        where(documentId(), '==', matchID)
+      );
+
+
+      const cacheSnapshot = await getDocsFromCache(cacheQ);
+      console.log("useMatches: checking cache for match ", matchID, " in league ", leagueID, " cache hit: ", !cacheSnapshot.empty);
+      return !cacheSnapshot.empty;
+    } catch (error) {
+      console.error("useMatches: Error checking cache for match:", error);
       throw error;
     }
   }
@@ -442,7 +496,7 @@ export function useMatches() {
     }
   }
 
-  return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatchesState, startOfMatches: startOfMatchesState, validateMapAgainstAllMatches};
+  return {matchesWindow, startUseMatches, setLeague, nextPage, prevPage, resetLeague, endOfMatches: endOfMatchesState, startOfMatches: startOfMatchesState};
 
 }
 
@@ -484,6 +538,25 @@ export function useMatchesJest(mockFirestore) {
       allMatches.current.set(leagueID, []);
     }
 
+  }
+
+  // Resets client side league data for given leagueID, useful in case of match rollback
+  async function resetLeague(leagueID) {
+    try {
+      if (!allMatches.current.has(leagueID)) {
+        throw new Error('League not found in useMatches hook');
+      }
+
+      allMatches.current.set(leagueID, []);
+      if (currLeague.current === leagueID) {
+        page.current = 0;
+        startOfMatches.current = true;
+        endOfMatches.current = false;
+        setLeague(leagueID);
+      }
+    } catch (error) {
+      throw error;
+    }
   }
 
   async function setLeague(leagueID) {
@@ -754,6 +827,6 @@ export function useMatchesJest(mockFirestore) {
   }
 
   // return fetchLeagueMatches, allMatches only for testing purposes
-  return {fetchLeagueMatches, allMatches, matchesWindow, startUseMatches, setLeague, nextPage, prevPage, endOfMatches: endOfMatches.current, startOfMatches: startOfMatches.current };
+  return {fetchLeagueMatches, allMatches, matchesWindow, startUseMatches, setLeague, nextPage, prevPage, resetLeague, endOfMatches: endOfMatches.current, startOfMatches: startOfMatches.current };
 
 }
