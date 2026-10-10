@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput, Platform, Modal, RefreshControl, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Modal, RefreshControl, Linking } from 'react-native';
+import { ThemedText as Text, ThemedTextInput as TextInput } from '@/components/Themed';
 import { getLeagues, joinLeague, verifyLeaguePassword } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import { osName } from 'expo-device';
@@ -392,7 +393,7 @@ export default function DiscoverLeagues() {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.createButton, { backgroundColor: '#a2153fff' }]}
+                style={[styles.createButton, { backgroundColor: colors.report }]}
                 onPress={() => {handleReportSubmit(); setShowReportModal(false); setMessageBody("");}}
               >
                 <Text style={styles.createButtonText}>Report</Text>
@@ -455,7 +456,7 @@ export default function DiscoverLeagues() {
             <View style={styles.leagueInfoContainer}>
               <View style={styles.leagueMainInfo}>
                 <Text style={styles.leagueName}>{league.league_name}{<TouchableOpacity style={styles.flagRed} onPress={() => {setCurLeague(league); setShowReportModal(true); }}>
-                  <Flag size={16} color="#ff0000"/>
+                  <Flag size={16} color={colors.danger}/>
                 </TouchableOpacity>}</Text>
                 
                 {league.description ? (<Text style={styles.leagueDescription}>{league.description}</Text>) : null}
@@ -480,7 +481,7 @@ export default function DiscoverLeagues() {
                 styles.joinButton,
                 league.players.some(player => player === user?.uid) && styles.joinButtonDisabled,
                 (!league.is_public && !league.players.some(player => player === user?.uid)) &&
-                 {backgroundColor: 'orange'}
+                 {backgroundColor: colors.accent}
               ]}
               onPress={() => joinLeagueClicked(league)}
               disabled={league.players.some(player => player === user?.uid)}
@@ -517,7 +518,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: 'orange',
+    backgroundColor: c.accent,
     alignItems: 'center',
     marginLeft: 10,
   },
@@ -577,7 +578,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
-    backgroundColor: '#a2153fff',
+    backgroundColor: c.report,
   },
   modalTitle: {
     fontSize: 20,

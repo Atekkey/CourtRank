@@ -20,6 +20,15 @@ const light = {
   primarySoft: '#f3e5f5',
   onPrimary: '#ffffff',
   accent: 'orange',
+  accentStrong: '#ff9900', // toggle pills, pagination
+  accentLoading: '#ff9900ad',
+  report: '#a2153f', // report modal header/button
+  notify: '#8536f4', // send-notification buttons
+  neutral: '#737373', // date modal header
+  neutralStrong: '#555555', // admin settings
+  eloBadge: '#a7bde7',
+  winText: '#2fdc74',
+  lossText: '#da6161',
   disabled: '#cccccc',
   success: '#4CAF50',
   successSoft: '#d6f5d6',
@@ -58,6 +67,15 @@ const dark: ThemeColors = {
   primarySoft: '#3a2340',
   onPrimary: '#ffffff',
   accent: 'orange',
+  accentStrong: '#ff9900',
+  accentLoading: '#ff9900ad',
+  report: '#b3284f',
+  notify: '#7c4ddb',
+  neutral: '#5a5a5a',
+  neutralStrong: '#444444',
+  eloBadge: '#3b4f73',
+  winText: '#4ee08c',
+  lossText: '#e57d7d',
   disabled: '#4a4a4a',
   success: '#43A047',
   successSoft: '#1f3a22',

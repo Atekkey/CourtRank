@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -11,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator, Image
 } from 'react-native';
+import { ThemedText as Text, ThemedTextInput as TextInput } from '@/components/Themed';
 import { router } from 'expo-router';
 import { loginUser, useGoogleAuth } from '../../services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
@@ -150,7 +149,7 @@ export default function LoginScreen() {
             disabled={loading || googleLoading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="white" />
+              <ActivityIndicator size="small" color={colors.onPrimary} />
             ) : (
               <Text style={styles.loginButtonText}>Sign In</Text>
             )}

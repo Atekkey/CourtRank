@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -11,6 +9,7 @@ import {
   ScrollView,
   ActivityIndicator, Image,
 } from 'react-native';
+import { ThemedText as Text, ThemedTextInput as TextInput } from '@/components/Themed';
 import { router } from 'expo-router';
 import { registerPlayer, useGoogleAuth } from '@/services/firebaseService';
 import { Ionicons } from '@expo/vector-icons';
@@ -254,7 +253,7 @@ export default function RegisterScreen() {
             disabled={isFormDisabled}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="white" />
+              <ActivityIndicator size="small" color={colors.onPrimary} />
             ) : (
               <Text style={styles.registerButtonText}>Create Account</Text>
             )}
@@ -423,6 +422,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontWeight: '600',
   },
   disabledLink: {
-    color: '#ccc',
+    color: c.disabled,
   },
 });

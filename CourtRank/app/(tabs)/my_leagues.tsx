@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshControl, Platform, View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TextInput, FlatList, Linking, Dimensions, useWindowDimensions } from 'react-native';
+import { RefreshControl, Platform, View, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, FlatList, Linking, Dimensions, useWindowDimensions } from 'react-native';
+import { ThemedText as Text, ThemedTextInput as TextInput } from '@/components/Themed';
 import { createLeague, getUserLeagues, leaveLeague, createNotification, createMatch, getAllMatches, updateLeagueEndDate, updateLeagueInfo } from '../../services/firebaseService';
 import { useAuth } from '../../contexts/AuthContext';
 import * as Device from 'expo-device';
@@ -329,7 +330,7 @@ export default function MyLeagues() {
         <View style={styles.name}>
           <Text style={{ fontWeight: '500' }}>{name} {" "}
             <TouchableOpacity style={styles.flagRed} onPress={() => {setReportPlayer(pInfo2); setPlayerNotLeague(true); reportClicked()}}>
-              <Flag size={12} color="#ff0000"/>
+              <Flag size={12} color={colors.danger}/>
             </TouchableOpacity>
           </Text>
         </View>
@@ -1055,7 +1056,7 @@ export default function MyLeagues() {
             
                         {(playerWon && (isProcessed)) && (
             <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id, matchInfo.league_id)} style={styles_match.rollbackButton}>
-              <RotateCcw size={24} color="red" />
+              <RotateCcw size={24} color={colors.danger} />
             </TouchableOpacity>)
             }
           </View>
@@ -1125,7 +1126,7 @@ export default function MyLeagues() {
 
             {(playerWon && (isProcessed)) && (
             <TouchableOpacity onPress={() => rollBackPressed(matchInfo.id)} style={styles_match.rollbackButton}>
-              <RotateCcw size={24} color="red" />
+              <RotateCcw size={24} color={colors.danger} />
             </TouchableOpacity>)
             }
 
@@ -1297,14 +1298,14 @@ export default function MyLeagues() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeaderDate}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Calendar color="white" size={24} style={{ marginRight: 10 }} />
+              <Calendar color={colors.onPrimary} size={24} style={{ marginRight: 10 }} />
               <Text style={styles.modalTitle}>Set League End Date</Text>
             </View>
             <TouchableOpacity 
               style={styles.closeButton}
               onPress={handleCancelDate}
             >
-              <X color="white" size={24} />
+              <X color={colors.onPrimary} size={24} />
             </TouchableOpacity>
           </View>
 
@@ -1420,14 +1421,14 @@ export default function MyLeagues() {
       <View style={styles.modalContainer}>
         <View style={styles.modalHeaderAdminSettings}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Pencil color="white" size={24} style={{ marginRight: 10 }} />
+            <Pencil color={colors.onPrimary} size={24} style={{ marginRight: 10 }} />
             <Text style={styles.modalTitle}>Admin Settings</Text>
           </View>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={handleCancelAdminSettings}
           >
-            <X color="white" size={24} />
+            <X color={colors.onPrimary} size={24} />
           </TouchableOpacity>
         </View>
 
@@ -1546,7 +1547,7 @@ export default function MyLeagues() {
           }
 
           <TouchableOpacity style={styles.flagRed} onPress={() => {setReportPlayer(null); setCurLeague(league); setPlayerNotLeague(false); reportClicked()}}>
-            <Flag size={22} color="#ff0000"/>
+            <Flag size={22} color={colors.danger}/>
           </TouchableOpacity>
           
         </View>
@@ -1708,7 +1709,7 @@ export default function MyLeagues() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.createButton, { backgroundColor: '#a2153fff' }]}
+              style={[styles.createButton, { backgroundColor: colors.report }]}
               onPress={() => {handleReportSubmit(); reportUnclicked();}}
             >
               <Text style={styles.createButtonText}>Report</Text>
@@ -2155,12 +2156,12 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   recordNumberWin: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2fdc74ff',
+    color: c.winText,
   },
   recordNumberLoss: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#da6161ff',
+    color: c.lossText,
   },
   recordLabel: {
     fontSize: 12,
@@ -2174,7 +2175,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginHorizontal: 10,
   },
   logGameButton: {
-    backgroundColor: 'orange',
+    backgroundColor: c.accent,
     padding: 15,
     borderRadius: 50,
     marginVertical: 15,
@@ -2233,14 +2234,14 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     marginLeft: 10,
   },
   notifButton: {
-    backgroundColor: '#8536f4ff',
+    backgroundColor: c.notify,
     padding: 12,
     borderRadius: 8,
     flex: 1,
     marginLeft: 10,
   },
   adminSettings: {
-    backgroundColor: '#555',
+    backgroundColor: c.neutralStrong,
     padding: 12,
     borderRadius: 8,
     flex: 1,
@@ -2260,7 +2261,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     paddingVertical: 40,
   },
   sendNotifButton: {
-    backgroundColor: '#8536f4ff',
+    backgroundColor: c.notify,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -2304,7 +2305,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
-    backgroundColor: '#a2153fff',
+    backgroundColor: c.report,
   },
   modalHeaderDate: {
     flexDirection: 'row',
@@ -2313,7 +2314,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
-    backgroundColor: '#737373',
+    backgroundColor: c.neutral,
   },
   modalHeaderAdminSettings: {
     flexDirection: 'row',
@@ -2322,7 +2323,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: c.border,
-    backgroundColor: '#555',
+    backgroundColor: c.neutralStrong,
   },
   modalTitleNotWeb: {
     fontSize: 15,
@@ -2447,7 +2448,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: 'orange',
+    backgroundColor: c.accent,
     alignItems: 'center',
     marginLeft: 10,
   },
@@ -2455,7 +2456,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     
     paddingRight: 20,
     borderRadius: 12,
-    backgroundColor: '#a7bde7ff',
+    backgroundColor: c.eloBadge,
     alignItems: 'center',
     justifyContent: 'center',
     
@@ -2474,7 +2475,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     borderRadius: 20,
   },
   togglePillActive: {
-    backgroundColor: '#ff9900', 
+    backgroundColor: c.accentStrong, 
   },
   togglePillText: {
     color: c.text,
@@ -2510,7 +2511,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     // borderWidth: 2,
   },
   pageButton: {
-    backgroundColor: '#ff9900',
+    backgroundColor: c.accentStrong,
     padding: 10,
     borderRadius: 10,
     flex: 1,
@@ -2518,7 +2519,7 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
 
   },
   buttonLoading: {
-    backgroundColor: '#ff9900ad',
+    backgroundColor: c.accentLoading,
   },
   buttonDisabled: {
     backgroundColor: c.disabled,
@@ -2586,7 +2587,7 @@ const makeStyles_match = (c: ThemeColors) => StyleSheet.create({
     alignItems: 'flex-start',
 
         borderLeftWidth: 4,
-    borderLeftColor: 'green',
+    borderLeftColor: c.success,
     paddingLeft: 6,
 
     borderRadius: 4,
@@ -2596,7 +2597,7 @@ const makeStyles_match = (c: ThemeColors) => StyleSheet.create({
     flex: 3,
     alignItems: 'flex-end',
     borderRightWidth: 4,
-    borderRightColor: 'red',
+    borderRightColor: c.danger,
     paddingRight: 6,
     borderRadius: 4,
     

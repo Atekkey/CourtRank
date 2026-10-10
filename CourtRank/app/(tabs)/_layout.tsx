@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Platform, Text, View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { ThemedText as Text } from '@/components/Themed';
 import * as Device from 'expo-device';
 import {osName} from 'expo-device';
 
@@ -76,7 +77,7 @@ export default function TabLayout() {
             
               <FiHome name="home" size={size} color={color}  
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -95,7 +96,7 @@ export default function TabLayout() {
               
               <Ionicons name="home" size={size} color={color}  
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -120,7 +121,7 @@ export default function TabLayout() {
               
               <FiSearch name="search" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -129,7 +130,7 @@ export default function TabLayout() {
               : 
               <Ionicons name="search" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -148,7 +149,7 @@ export default function TabLayout() {
               Platform.OS === 'web' ?
               <FiAward name="trophy" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -158,7 +159,7 @@ export default function TabLayout() {
               :
               <Ionicons name="trophy" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -177,7 +178,7 @@ export default function TabLayout() {
               Platform.OS === 'web' ?
               <FiUser name="person" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',
@@ -187,7 +188,7 @@ export default function TabLayout() {
               :
               <Ionicons name="person" size={size} color={color} 
               style={{
-                borderBottomColor: focused ? 'orange' : 'transparent',
+                borderBottomColor: focused ? colors.accent : 'transparent',
                 borderBottomWidth: 2,
                 transitionProperty: 'border-bottom-color',
                 transitionDuration: '0.3s',

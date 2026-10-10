@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, TextInput, ActivityIndicator, Image, Modal, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, ActivityIndicator, Image, Modal, Linking } from 'react-native';
+import { ThemedText as Text, ThemedTextInput as TextInput } from '@/components/Themed';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo, updateUserNames } from '../../services/firebaseService';
