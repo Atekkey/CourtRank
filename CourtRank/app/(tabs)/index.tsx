@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUserNotifications } from '../../services/firebaseService';
 import Svg, { Text as SvgText } from "react-native-svg";
 import { osName } from 'expo-device';
+import { useTheme, useThemedStyles } from '../../contexts/ThemeContext';
+import { ThemeColors } from '../../constants/theme';
 // import { Trash } from 'lucide-react-native';
 
 
@@ -39,6 +41,8 @@ const eloLegend = [
 ];
 
 export default function Index() {
+  const { colors, isDark } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, userInfo, isLoading, logout } = useAuth();
   const [notifs, setNotifs] = useState([]);
 
@@ -48,9 +52,9 @@ export default function Index() {
   
 
   const chartConfig = {
-  backgroundGradientFrom: '#ffffff',
-  backgroundGradientTo: '#ffffff',
-  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+  backgroundGradientFrom: colors.card,
+  backgroundGradientTo: colors.card,
+  color: (opacity = 1) => isDark ? `rgba(255, 255, 255, ${opacity})` : `rgba(0, 0, 0, ${opacity})`,
   strokeWidth: 2,
   useShadowColorFromDataset: true, 
   decimalPlaces: 0,
@@ -178,14 +182,14 @@ export default function Index() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   flagRed: {
-    color: 'red',
+    color: c.dangerText,
     padding: 5,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
     
   },
   header: {
@@ -197,7 +201,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: c.onPrimary,
     fontStyle: 'italic',
 
       
@@ -207,7 +211,7 @@ const styles = StyleSheet.create({
     height: 80,
     resizeMode: 'contain',
 
-           shadowColor: '#000',
+           shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: 'white',
+    color: c.onPrimary,
     marginTop: 5,
   },
   profileContainer: {
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: c.shadow,
  
     elevation: 3,
     marginLeft: 'auto',
@@ -237,11 +241,11 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: "#8E24AA" ,
+    borderColor: c.primary ,
     padding: 6,
     marginBottom: 15,
     position: 'relative',
-    shadowColor: "#8E24AA" ,
+    shadowColor: c.primary ,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 8,
@@ -264,12 +268,12 @@ const styles = StyleSheet.create({
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: "#8E24AA" ,
+    backgroundColor: c.primary ,
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileImageText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
 
@@ -285,8 +289,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     
     
-    backgroundColor: 'white',
-    shadowColor: '#000',
+    backgroundColor: c.card,
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: "black" ,
+    color: c.textStrong ,
     marginTop: 25,
     marginBottom: 15,
 
@@ -317,19 +321,19 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: "#8E24AA" ,
+    color: c.primaryText ,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSecondary,
     marginTop: 4,
   },
   chartContainer: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     padding: 20,
     borderRadius: 15,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -338,7 +342,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: "#8E24AA" ,
+    color: c.primaryText ,
     marginBottom: 15,
 
    
@@ -349,11 +353,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   announcementsContainer: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     padding: 20,
     borderRadius: 15,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -367,26 +371,26 @@ const styles = StyleSheet.create({
   },
   noAnnouncementsText: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   noAnnouncementsSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: c.textMuted,
     marginTop: 5,
     textAlign: 'center',
   },
   announcementCard: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: c.surface,
     padding: 15,
     borderRadius: 10,
     marginBottom: 10,
     borderLeftWidth: 4,
-    borderLeftColor: "#8E24AA" ,
+    borderLeftColor: c.primary ,
   },
   newAnnouncementCard: {
-    backgroundColor: '#e3f2fd',
-    borderLeftColor: '#FF9800',
+    backgroundColor: c.infoSoft,
+    borderLeftColor: c.warning,
   },
   announcementHeader: {
     flexDirection: 'row',
@@ -399,7 +403,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#8E24AA" ,
+    backgroundColor: c.primary ,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -413,33 +417,33 @@ const styles = StyleSheet.create({
   announcementTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: c.text,
   },
   announcementLeague: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSecondary,
     marginTop: 2,
   },
   newBadge: {
-    backgroundColor: '#FF9800',
+    backgroundColor: c.warning,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
   },
   newBadgeText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 10,
     fontWeight: 'bold',
   },
   announcementMessage: {
     fontSize: 14,
-    color: '#666',
+    color: c.textSecondary,
     marginBottom: 5,
     lineHeight: 20,
   },
   announcementTimestamp: {
     fontSize: 12,
-    color: '#999',
+    color: c.textMuted,
     textAlign: 'right',
   },
   legendContainer: {
@@ -461,7 +465,7 @@ legendColor: {
 },
 legendText: {
   fontSize: 12,
-  color: '#666',
+  color: c.textSecondary,
 },
   
 });

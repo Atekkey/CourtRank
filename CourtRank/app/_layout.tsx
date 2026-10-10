@@ -7,6 +7,9 @@ import { AuthProvider, useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import { osName } from 'expo-device';
+import { StatusBar } from 'expo-status-bar';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
 
 function RootLayoutNav() {
   const { user, isLoading } = useAuth();
@@ -14,6 +17,20 @@ function RootLayoutNav() {
   const router = useRouter();
   const [hasPlayer, setHasPlayer] = useState(false);
   const [checkingPlayer, setCheckingPlayer] = useState(false);
+  const { colors, isDark } = useTheme();
+
+  const baseNavTheme = isDark ? DarkTheme : DefaultTheme;
+  const navTheme = {
+    ...baseNavTheme,
+    colors: {
+      ...baseNavTheme.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.card,
+      text: colors.text,
+      border: colors.border,
+    },
+  };
 
   
 
@@ -61,11 +78,14 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/login" options={{ title: 'Login', headerShown: false }} />
-      <Stack.Screen name="auth/register" options={{ title: 'Register', headerShown: false }} />
-    </Stack>
+    <NavThemeProvider value={navTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="auth/login" options={{ title: 'Login', headerShown: false }} />
+        <Stack.Screen name="auth/register" options={{ title: 'Register', headerShown: false }} />
+      </Stack>
+    </NavThemeProvider>
   );
 }
 
@@ -73,8 +93,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootLayoutNav />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

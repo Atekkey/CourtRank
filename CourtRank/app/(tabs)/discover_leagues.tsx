@@ -5,8 +5,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { osName } from 'expo-device';
 import { Flag } from 'lucide-react-native';
 import { myPrint, confirmAction } from '../helpers';
+import { useTheme, useThemedStyles } from '../../contexts/ThemeContext';
+import { ThemeColors } from '../../constants/theme';
 
 export default function DiscoverLeagues() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [leagues, setLeagues] = useState([]);
   const [filteredLeagues, setFilteredLeagues] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -416,7 +420,7 @@ export default function DiscoverLeagues() {
           placeholder="Search by League Name (e.g., Basketball, Tennis)"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textMuted}
           
           
         />
@@ -500,7 +504,7 @@ export default function DiscoverLeagues() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   flagRed: {
     color: '0xff0000',
     padding: 5,
@@ -520,22 +524,23 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: c.onPrimary,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
+    color: c.text,
   },
   closeButton: {
     padding: 5,
   },
   closeButtonText: {
     fontSize: 24,
-    color: 'white',
+    color: c.onPrimary,
     fontWeight: 'bold',
   },
   modalContent: {
@@ -548,12 +553,12 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: c.text,
     marginBottom: 8,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -561,8 +566,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#8E24AA',
+    borderBottomColor: c.border,
+    backgroundColor: c.primary,
     
   },
   reportModalHeader: {
@@ -571,49 +576,49 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
     backgroundColor: '#a2153fff',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: c.onPrimary,
   },
   enterButton: {
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#4CAF50',
+    backgroundColor: c.success,
     alignItems: 'center',
     marginLeft: 10,
   },
   enterButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: c.onPrimary,
   },
   cancelButton: {
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
     alignItems: 'center',
     marginRight: 10,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: c.textSecondary,
   },
   modalActions: {
     flexDirection: 'row',
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: c.border,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
     
   },
   // NEW: Center content style for loading and error states
@@ -624,26 +629,26 @@ const styles = StyleSheet.create({
   // NEW: Loading text style
   loadingText: {
     fontSize: 18,
-    color: '#666',
+    color: c.textSecondary,
     textAlign: 'center',
   },
   // NEW: Error text style
   errorText: {
     fontSize: 16,
-    color: '#d32f2f',
+    color: c.dangerText,
     textAlign: 'center',
     marginBottom: 20,
     paddingHorizontal: 20,
   },
   // NEW: Retry button styles
   retryButton: {
-    backgroundColor: '#8E24AA',
+    backgroundColor: c.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -656,54 +661,55 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     marginTop: 5,
   },
   searchContainer: {
     paddingHorizontal: 15,
   },
   searchInput: {
-    backgroundColor:'white',
+    backgroundColor: c.card,
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 12,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: c.border,
+    color: c.text,
   },
   
   searchSection: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     padding: 15,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
   },
   filterButton: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     minWidth: 80,
   },
   filterButtonActive: {
-    backgroundColor: '#8E24AA',
-    borderColor: '#8E24AA',
+    backgroundColor: c.primary,
+    borderColor: c.primary,
   },
   filterText: {
-    color: '#8E24AA',
+    color: c.primaryText,
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',
   },
   filterTextActive: {
-    color: 'white',
+    color: c.onPrimary,
   },
   resultsContainer: {
     flexDirection: 'row',
@@ -713,15 +719,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
   },
   resultsText: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#8E24AA',
+    color: c.primaryText,
     fontWeight: '500',
   },
   noResultsContainer: {
@@ -730,20 +736,20 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 18,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   noResultsSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: c.textMuted,
     marginTop: 5,
   },
   leagueCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -752,7 +758,7 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
     marginBottom: 10,
 
     
@@ -761,7 +767,7 @@ const styles = StyleSheet.create({
   },
   leagueInfo: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     marginVertical: 2,
   },
   leagueMainInfo: {
@@ -781,21 +787,21 @@ const styles = StyleSheet.create({
   },
   leagueDescription: {
     fontSize: 14,
-    color: '#888',
+    color: c.textMuted,
     fontStyle: 'italic',
     maxWidth: '95%',
   },
   joinButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: c.success,
     padding: 12,
     borderRadius: 8,
     marginTop: 15,
   },
   joinButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: c.disabled,
   },
   joinButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

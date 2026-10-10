@@ -11,6 +11,8 @@ import { myPrint, checkIsProfanityAndAlert, confirmAction } from '../helpers';
 
 // Rollback
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useTheme, useThemedStyles } from '../../contexts/ThemeContext';
+import { ThemeColors } from '../../constants/theme';
 const functions = getFunctions();
 const rollbackMatch = httpsCallable(functions, 'rollback_match');
 const handleRollback = async (matchId: string): Promise<boolean> => {
@@ -29,6 +31,11 @@ const handleRollback = async (matchId: string): Promise<boolean> => {
 
 
 export default function MyLeagues() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
+  const styles_col = useThemedStyles(makeStyles_col);
+  const styles_match = useThemedStyles(makeStyles_match);
+  const styles_date = useThemedStyles(makeStyles_date);
   const [myLeagues, setMyLeagues] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
@@ -317,7 +324,7 @@ export default function MyLeagues() {
     const bigScore = score >= 2400;
     var pInfo2 = {...pInfo, pId: pId};
     return (
-      <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? '#f9f9f9' : '#ffffff'}]}>
+      <View key={pId} style={[styles.row, {backgroundColor: (i % 2 === 0) ? colors.surface : colors.card}]}>
         <Text style={[styles.rank, { color: getRankColor(rank || 10) }]}>{rank}</Text>
         <View style={styles.name}>
           <Text style={{ fontWeight: '500' }}>{name} {" "}
@@ -353,7 +360,7 @@ export default function MyLeagues() {
           </View>
 
           
-          <View style={[styles.row, {backgroundColor: '#d1d1d1ff'}]}>
+          <View style={[styles.row, {backgroundColor: colors.borderStrong}]}>
             <Text style={styles.rank}>Rank</Text>
             <Text style={styles.name}>Name</Text>
             <Text style={styles.winLoss}>W / L</Text>
@@ -909,7 +916,7 @@ export default function MyLeagues() {
               <View style={styles_col.leftColumn}>
                 {/* Search Bar */}
                 <TextInput
-                  style={[styles.searchBar, {color: '#666666'}]}
+                  style={[styles.searchBar, {color: colors.textSecondary}]}
                   placeholder="Search players..."
                   value={search}
                   onChangeText={setSearch}
@@ -1309,7 +1316,7 @@ export default function MyLeagues() {
                 value={selectedDate}
                 onChangeText={setSelectedDate}
                 placeholder="MM/DD/YYYY (e.g., 08/25/2025)"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
               <Text style={styles_date.dateHintText}>
                 Leave blank for no expiration date
@@ -1712,7 +1719,7 @@ export default function MyLeagues() {
   );
 
   const horzBar = (
-    <View style={{ height: 1, backgroundColor: '#ccc', marginVertical: 40 }}></View>
+    <View style={{ height: 1, backgroundColor: colors.borderStrong, marginVertical: 40 }}></View>
   );
 
   return (
@@ -1745,7 +1752,7 @@ export default function MyLeagues() {
   );
 }
 
-const styles_col = StyleSheet.create({
+const makeStyles_col = (c: ThemeColors) => StyleSheet.create({
   modalContentContainer: {
   flex: 1,
   },
@@ -1756,7 +1763,7 @@ const styles_col = StyleSheet.create({
     flexBasis: 0,
     flexGrow: 1,
     borderRightWidth: 2,
-    borderRightColor: '#ccc',
+    borderRightColor: c.borderStrong,
   },
   rightColumn: {
     minHeight: 80,
@@ -1764,9 +1771,9 @@ const styles_col = StyleSheet.create({
     margin: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: c.borderStrong,
     overflow: 'hidden',
-    backgroundColor: 'white',
+    backgroundColor: c.card,
 
     flexDirection: 'row',
 
@@ -1776,17 +1783,17 @@ const styles_col = StyleSheet.create({
   teamHeaderRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: c.borderStrong,
   },
   teamHeaderWin: {
     flex: 1,
-    backgroundColor: '#d6f5d6',
+    backgroundColor: c.successSoft,
     padding: 8,
     alignItems: 'center',
   },
   teamHeaderLoss: {
     flex: 1,
-    backgroundColor: '#f5d6d6',
+    backgroundColor: c.dangerSoft,
     padding: 8,
     alignItems: 'center',
   },
@@ -1803,26 +1810,26 @@ const styles_col = StyleSheet.create({
   },
   teamPlayersText: {
     fontSize: 14,
-    color: '#333',
+    color: c.text,
     fontWeight: 'bold',
   },
   winArea: {
     flex: 1,
-    backgroundColor: '#d6f5d6',
+    backgroundColor: c.successSoft,
     alignItems: 'center',
     justifyContent: 'flex-start',
     padding: 8,
   },
   lossArea: {
     flex: 1,
-    backgroundColor: '#f5d6d6',
+    backgroundColor: c.dangerSoft,
     alignItems: 'center',
     justifyContent: 'flex-start',
     padding: 8,
   },
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   spacing: {
     marginVertical: 6,
   },
@@ -1830,7 +1837,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: c.border,
   },
   nameCol: {
     flex: 2,
@@ -1842,38 +1849,38 @@ const styles = StyleSheet.create({
   },
   eloText: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSecondary,
   },
   winCol: {
     flex: 1,
-    backgroundColor: '#d6f5d6',
+    backgroundColor: c.successSoft,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
   lossCol: {
     flex: 1,
-    backgroundColor: '#f5d6d6',
+    backgroundColor: c.dangerSoft,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
   clearCol: {
     flex: 1,
-    backgroundColor: '#cdcdcdff',
+    backgroundColor: c.disabled,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
   },
   selectedWin: {
-    backgroundColor: '#98e698',
+    backgroundColor: c.selectedWin,
     borderWidth: 2,
-    borderColor: 'black',
+    borderColor: c.textStrong,
   },
   selectedLoss: {
-    backgroundColor: '#e69898',
+    backgroundColor: c.selectedLoss,
     borderWidth: 2,
-    borderColor: 'black',
+    borderColor: c.textStrong,
   },
   teamText: {
     fontWeight: 'bold',
@@ -1882,7 +1889,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     alignItems: 'center',
     paddingHorizontal: 5,
   },
@@ -1924,7 +1931,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
     
   },
   header: {
@@ -1938,27 +1945,27 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     marginTop: 5,
   },
   createLeagueButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: c.success,
     margin: 15,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   createLeagueButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1970,18 +1977,18 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
    
 
     
   },
   resultsText: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
   },
   clearFiltersText: {
     fontSize: 14,
-    color: '#8E24AA',
+    color: c.primaryText,
     fontWeight: '500',
   },
   noResultsContainer: {
@@ -1990,33 +1997,33 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 18,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   noResultsSubtext: {
     fontSize: 14,
-    color: '#999',
+    color: c.textMuted,
     marginTop: 5,
     textAlign: 'center',
   },
   leagueCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     marginBottom: 40,
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
     elevation: 3,
   },
   leagueCardExpired: {
-    backgroundColor: '#d4d4d4ff',
+    backgroundColor: c.cardMuted,
     margin: 15,
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -2042,7 +2049,7 @@ const styles = StyleSheet.create({
   leagueName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
     flex: 1,
   },
   rankBadge: {
@@ -2052,13 +2059,13 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   rankText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 14,
     fontWeight: 'bold',
   },
   leagueInfo: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     marginVertical: 2,
   },
   leagueEnd: {
@@ -2066,17 +2073,17 @@ const styles = StyleSheet.create({
     padding: 5,
     borderRadius: 10,
     fontSize: 26,
-    color: '#666',
+    color: c.textSecondary,
     justifyContent: 'center',
   },
   leagueEndText: {
     fontSize: 18,
-    color: "#666",
+    color: c.textSecondary,
     textAlign: 'left',
   },
   leagueDescription: {
     fontSize: 14,
-    color: '#888',
+    color: c.textMuted,
     marginTop: 8,
     fontStyle: 'italic',
   },
@@ -2085,7 +2092,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: c.surface,
     borderRadius: 8,
   },
   statsContainerExpired: {
@@ -2093,7 +2100,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#dfdfdfff',
+    backgroundColor: c.surfaceMuted,
     borderRadius: 8,
   },
   statItem: {
@@ -2109,13 +2116,13 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
     marginTop: 4,
   },
   recordContainer: {
@@ -2124,7 +2131,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: c.surface,
     borderRadius: 8,
   },
   recordContainerExpired: {
@@ -2133,7 +2140,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 15,
     paddingVertical: 15,
-    backgroundColor: '#dfdfdfff',
+    backgroundColor: c.surfaceMuted,
     borderRadius: 8,
   },
   recordItem: {
@@ -2143,7 +2150,7 @@ const styles = StyleSheet.create({
   recordNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
   },
   recordNumberWin: {
     fontSize: 24,
@@ -2157,13 +2164,13 @@ const styles = StyleSheet.create({
   },
   recordLabel: {
     fontSize: 12,
-    color: '#666',
+    color: c.textSecondary,
     marginTop: 4,
   },
   recordSeparator: {
     width: 1,
     height: 40,
-    backgroundColor: '#ddd',
+    backgroundColor: c.border,
     marginHorizontal: 10,
   },
   logGameButton: {
@@ -2172,7 +2179,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginVertical: 15,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -2187,12 +2194,12 @@ const styles = StyleSheet.create({
 
     marginBottom: -50,
     borderWidth: 4,
-    borderColor: 'white',
+    borderColor: c.card,
 
     
   },
   logGameButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
 
@@ -2205,20 +2212,20 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   viewButton: {
-    backgroundColor: '#8E24AA',
+    backgroundColor: c.primary,
     padding: 12,
     borderRadius: 8,
     flex: 1,
     marginRight: 10,
   },
   viewButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
   leaveButton: {
-    backgroundColor: '#f44336',
+    backgroundColor: c.danger,
     
     padding: 12,
     borderRadius: 8,
@@ -2240,14 +2247,14 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   adminSettingsButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
   adminSettingsPlaceholder: {
     fontSize: 16,
-    color: '#888',
+    color: c.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
     paddingVertical: 40,
@@ -2260,12 +2267,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   sendNotifButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
   leaveButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -2274,11 +2281,11 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
   },
   modalNotifContainer: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     flexDirection: 'column',
   },
   modalHeader: {
@@ -2287,8 +2294,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#8E24AA',
+    borderBottomColor: c.border,
+    backgroundColor: c.primary,
   },
   reportModalHeader: {
     flexDirection: 'row',
@@ -2296,7 +2303,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
     backgroundColor: '#a2153fff',
   },
   modalHeaderDate: {
@@ -2305,7 +2312,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
     backgroundColor: '#737373',
   },
   modalHeaderAdminSettings: {
@@ -2314,25 +2321,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: c.border,
     backgroundColor: '#555',
   },
   modalTitleNotWeb: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: 'white',
+    color: c.onPrimary,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: c.onPrimary,
   },
   closeButton: {
     padding: 5,
   },
   closeButtonText: {
     fontSize: 24,
-    color: 'white',
+    color: c.onPrimary,
     fontWeight: 'bold',
   },
   modalContent: {
@@ -2345,16 +2352,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: c.text,
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
+    color: c.text,
   },
   textArea: {
     height: 80,
@@ -2367,22 +2375,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: c.surfaceAlt,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
   },
   sportOptionSelected: {
-    backgroundColor: '#8E24AA',
-    borderColor: '#8E24AA',
+    backgroundColor: c.primary,
+    borderColor: c.primary,
   },
   sportOptionText: {
     fontSize: 14,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
   },
   sportOptionTextSelected: {
-    color: 'white',
+    color: c.onPrimary,
   },
   privacyOptions: {
     flexDirection: 'row',
@@ -2392,48 +2400,48 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: c.surface,
     marginHorizontal: 5,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: c.border,
   },
   privacyOptionSelected: {
-    borderColor: '#8E24AA',
-    backgroundColor: '#e3f2fd',
+    borderColor: c.primary,
+    backgroundColor: c.infoSoft,
   },
   privacyOptionText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: c.textSecondary,
     marginBottom: 4,
   },
   privacyOptionTextSelected: {
-    color: '#8E24AA',
+    color: c.primaryText,
   },
   privacyOptionSubtext: {
     fontSize: 12,
-    color: '#999',
+    color: c.textMuted,
     textAlign: 'center',
   },
   modalActions: {
     flexDirection: 'row',
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: c.border,
   },
   cancelButton: {
     flex: 1,
     padding: 15,
     borderRadius: 8,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
     alignItems: 'center',
     marginRight: 10,
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
+    color: c.textSecondary,
   },
   createButton: {
     flex: 1,
@@ -2455,7 +2463,7 @@ const styles = StyleSheet.create({
   togglePillContainer: {
     flexDirection: 'row',
     borderRadius: 20,
-    backgroundColor: '#ccc',
+    backgroundColor: c.disabled,
     alignSelf: 'flex-start', 
     padding: 2,
     marginLeft: 10,
@@ -2469,27 +2477,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff9900', 
   },
   togglePillText: {
-    color: '#333',
+    color: c.text,
     fontWeight: '500',
   },
   togglePillTextActive: {
-    color: 'white',
+    color: c.onPrimary,
     fontWeight: '700',
   },
   createButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: c.onPrimary,
   },
   searchBar: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     borderRadius: 8,
     margin: 10,
+    color: c.text,
   },
   selectedRow: {
-    backgroundColor: '#d0f0d0', 
+    backgroundColor: c.successSoft, 
   },
   pageButtonContainer: {
     flexDirection: 'row',
@@ -2512,34 +2521,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff9900ad',
   },
   buttonDisabled: {
-    backgroundColor: '#cccccc',
+    backgroundColor: c.disabled,
   },
   datePage: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: c.text,
     flex: 5,
     
     textAlign: 'center',
   },
 
   flagRed: {
-    color: '0xff0000',
+    color: c.dangerText,
     padding: 5,
   }
 });
 
-const styles_match = StyleSheet.create({
+const makeStyles_match = (c: ThemeColors) => StyleSheet.create({
   matchContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
 
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     
 
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -2556,13 +2565,13 @@ const styles_match = StyleSheet.create({
   },
   
   matchModalContainer: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   card: {
     flex: 1,
     padding: 12,
     marginHorizontal: 4,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     alignItems: 'center',
     justifyContent: 'center',
     
@@ -2601,45 +2610,45 @@ const styles_match = StyleSheet.create({
   teamName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: 'white',
+    color: c.onPrimary,
   },
   names: {
     fontSize: 14,
-    color: 'black',
+    color: c.textStrong,
     fontWeight: '700',
 
   },
   matchDate: {
     fontSize: 14,
-    color: 'black',
+    color: c.textStrong,
     fontWeight: '600',
   }
 
 });
 
-const styles_date = StyleSheet.create({dateHintText: {
+const makeStyles_date = (c: ThemeColors) => StyleSheet.create({dateHintText: {
   fontSize: 12,
-  color: '#999',
+  color: c.textMuted,
   marginTop: 4,
   fontStyle: 'italic',
 },
 leagueInfoBox: {
-  backgroundColor: '#f8f9fa',
+  backgroundColor: c.surface,
   padding: 15,
   borderRadius: 8,
   marginTop: 10,
   borderWidth: 1,
-  borderColor: '#e0e0e0',
+  borderColor: c.border,
 },
 leagueInfoTitle: {
   fontSize: 14,
   fontWeight: '600',
-  color: '#666',
+  color: c.textSecondary,
   marginBottom: 5,
 },
 leagueInfoText: {
   fontSize: 14,
-  color: '#333',
+  color: c.text,
   marginTop: 3,
 }
 });

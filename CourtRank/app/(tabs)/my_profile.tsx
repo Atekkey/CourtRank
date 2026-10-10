@@ -4,8 +4,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getPlayerInfo, updateUserNames } from '../../services/firebaseService';
 import { osName } from 'expo-device';
 import { myPrint, privatePolicy } from '../helpers';
+import { useTheme, useThemedStyles, ThemePreference } from '../../contexts/ThemeContext';
+import { ThemeColors } from '../../constants/theme';
 
 export default function MyProfile() {
+  const { colors, preference, setPreference } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const { user, userInfo, isLoading, logout } = useAuth();
   const [error, setError] = useState(null);
 
@@ -13,6 +17,7 @@ export default function MyProfile() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
   const notifImplem = false;
 
   const hideAll = () => {
@@ -20,6 +25,7 @@ export default function MyProfile() {
     setShowHelp(false);
     setShowPrivacy(false);
     setShowEdit(false);
+    setShowAppearance(false);
   };
 
   const toggleNotif = () => {
@@ -40,6 +46,11 @@ export default function MyProfile() {
   const toggleEdit = () => {
     hideAll();
     setShowEdit(!showEdit);
+  };
+
+  const toggleAppearance = () => {
+    hideAll();
+    setShowAppearance(!showAppearance);
   };
 
   const [firstName, setFirstName] = useState(userInfo?.first_name || '');
@@ -136,7 +147,7 @@ export default function MyProfile() {
           <Text style={styles.title}>My Profile</Text>
         </View>
         <View style={[styles.profileCard, styles.centerContent]}>
-          <ActivityIndicator size="large" color="#8E24AA"/>
+          <ActivityIndicator size="large" color={colors.primaryText}/>
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </ScrollView>
@@ -192,6 +203,24 @@ export default function MyProfile() {
         </TouchableOpacity>
         {showEdit && editProfileComponent}
         
+        <TouchableOpacity style={styles.settingItem} onPress={() => toggleAppearance()}>
+          <Text style={styles.settingText}>Appearance</Text>
+        </TouchableOpacity>
+          {showAppearance && (<View style={styles.themeOptions}>
+            {(['system', 'light', 'dark'] as ThemePreference[]).map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[styles.themeOption, preference === option && styles.themeOptionSelected]}
+                onPress={() => setPreference(option)}
+              >
+                <Text style={[styles.themeOptionText, preference === option && styles.themeOptionTextSelected]}>
+                  {option[0].toUpperCase() + option.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>)}
+
+        
          {notifImplem && (<TouchableOpacity style={styles.settingItem} onPress={() => toggleNotif()}>
           <Text style={styles.settingText}>Notifications</Text>
           {showNotif && <Text style={[styles.settingSubtext, {marginTop: 10}]}>Yet to be implemented</Text>}
@@ -228,10 +257,10 @@ export default function MyProfile() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   header: {
     padding: 20,
@@ -241,14 +270,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: "#8e24aa",
+    color: c.primaryText,
   },
   profileCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     padding: 20,
     borderRadius: 15,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -267,7 +296,7 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     overflow: 'hidden',
-    borderColor: "#8E24AA",
+    borderColor: c.primary,
     borderWidth: 5,
   },
   profileImage: {
@@ -277,12 +306,12 @@ const styles = StyleSheet.create({
   profileImagePlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: "#8E24AA" ,
+    backgroundColor: c.primary ,
     justifyContent: 'center',
     alignItems: 'center',
   },
   profileImageText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 24,
     fontWeight: 'bold',
   },
@@ -294,44 +323,44 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
   },
   errorText: {
     fontSize: 16,
-    color: '#d32f2f',
+    color: c.dangerText,
     textAlign: 'center',
   },
   playerName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: c.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   playerLevel: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   playerLocation: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
     textAlign: 'center',
     marginBottom: 4,
   },
   playerEmail: {
     fontSize: 14,
-    color: '#999',
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
   settingsCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -340,24 +369,50 @@ const styles = StyleSheet.create({
   settingItem: {
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: c.divider,
   },
   settingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: c.text,
+  },
+  themeOptions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  themeOption: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+    alignItems: 'center',
+  },
+  themeOptionSelected: {
+    backgroundColor: c.primary,
+    borderColor: c.primary,
+  },
+  themeOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: c.textSecondary,
+  },
+  themeOptionTextSelected: {
+    color: c.onPrimary,
   },
   settingSubtext: {
     fontSize: 14,
-    color: '#777',
+    color: c.textSecondary,
   },
   logoutCard: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     margin: 15,
     marginBottom: 30,
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 4,
@@ -371,14 +426,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   logoutButtonText: {
-    color: '#f44336',
+    color: c.dangerText,
     fontSize: 16,
     fontWeight: 'bold',
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: "#8E24AA",
+    color: c.primaryText,
     marginBottom: 15,
   },
   inputGroup: {
@@ -387,47 +442,48 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     // fontWeight: '100',
-    color: '#333',
+    color: c.text,
     marginBottom: 8,
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: c.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: 'white',
+    backgroundColor: c.card,
+    color: c.text,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: c.success,
     margin: 5,
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   cancelButton: {
-    backgroundColor: 'grey',
+    backgroundColor: c.textMuted,
     margin: 5,
     padding: 12,
     borderRadius: 10,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   saveText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 20,
     // fontWeight: '100',
     // marginBottom: 8,

@@ -8,8 +8,10 @@ import { FiHome, FiSearch, FiAward, FiUser } from "react-icons/fi";
 
 import { Ionicons } from '@expo/vector-icons';
 import { Label } from '@react-navigation/elements';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
 
   return (
     
@@ -19,8 +21,8 @@ export default function TabLayout() {
         screenOptions={{
           tabBarShowLabel: false,
         
-          tabBarInactiveTintColor: 'white',
-          tabBarActiveTintColor: Platform.OS ==='web' ? 'orange' : 'white',
+          tabBarInactiveTintColor: colors.onPrimary,
+          tabBarActiveTintColor: Platform.OS ==='web' ? colors.accent : colors.onPrimary,
           
           
           
@@ -28,7 +30,8 @@ export default function TabLayout() {
           
           tabBarStyle: {
             height: 60,
-            backgroundColor: "#8E24AA" , 
+            backgroundColor: colors.primary,
+            borderTopWidth: 0,
             width: '90%',
             marginBottom: 20,
             borderRadius: 100,
@@ -42,7 +45,7 @@ export default function TabLayout() {
             
             marginLeft:'5%',
 
-          shadowColor: '#000',
+          shadowColor: colors.shadow,
           shadowOpacity: 0.6,
           shadowOffset: { width: 0, height: 5 },
           shadowRadius: 10,
@@ -52,7 +55,8 @@ export default function TabLayout() {
           },
           tabBarIconStyle: {
             marginTop: 2,
-          }
+          },
+          sceneStyle: { backgroundColor: colors.background },
           
           
 

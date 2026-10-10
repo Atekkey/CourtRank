@@ -17,11 +17,15 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { FcGoogle } from "react-icons/fc";
 import { osName } from 'expo-device';
+import { useTheme, useThemedStyles } from '../../contexts/ThemeContext';
+import { ThemeColors } from '../../constants/theme';
 
 
 
 
 export default function RegisterScreen() {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(makeStyles);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -150,17 +154,17 @@ export default function RegisterScreen() {
             disabled={isFormDisabled}
           >
             {googleLoading ? (
-              <ActivityIndicator size="small" color="#8E24AA" />
+              <ActivityIndicator size="small" color={colors.primaryText} />
             ) : (
               Platform.OS === 'web' ?
                 (
                   <>
-                    <FcGoogle name="logo-google" size={20} color="#8E24AA" style={styles.googleIcon} />
+                    <FcGoogle name="logo-google" size={20} color={colors.primaryText} style={styles.googleIcon} />
                     <Text style={styles.googleButtonText}>Continue with Google</Text>
                   </>
                 ) : (
                   <>
-                    <Ionicons name="logo-google" size={20} color="#8E24AA" style={styles.googleIcon} />
+                    <Ionicons name="logo-google" size={20} color={colors.primaryText} style={styles.googleIcon} />
                     <Text style={styles.googleButtonText}>Continue with Google</Text>
                   </>
                 ) 
@@ -182,7 +186,7 @@ export default function RegisterScreen() {
                 value={formData.firstName}
                 onChangeText={(value) => handleInputChange('firstName', value)}
                 autoCapitalize="words"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 editable={!isFormDisabled}
               />
             </View>
@@ -195,7 +199,7 @@ export default function RegisterScreen() {
                 value={formData.lastName}
                 onChangeText={(value) => handleInputChange('lastName', value)}
                 autoCapitalize="words"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
                 editable={!isFormDisabled}
               />
             </View>
@@ -211,7 +215,7 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               editable={!isFormDisabled}
             />
           </View>
@@ -225,7 +229,7 @@ export default function RegisterScreen() {
               onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry
               autoCapitalize="none"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               editable={!isFormDisabled}
             />
           </View>
@@ -239,7 +243,7 @@ export default function RegisterScreen() {
               onChangeText={(value) => handleInputChange('confirmPassword', value)}
               secureTextEntry
               autoCapitalize="none"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textMuted}
               editable={!isFormDisabled}
             />
           </View>
@@ -268,10 +272,10 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: c.background,
   },
   scrollContainer: {
     flexGrow: 1,
@@ -293,29 +297,29 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#8E24AA',
+    color: c.primaryText,
     marginBottom: 6,
     marginRight: -6,
   },
   subtitle: {
     fontSize: 18,
-    color: '#666',
+    color: c.textSecondary,
     fontWeight: '500',
     textAlign: 'center',
     marginBottom: 16,
   },
   formContainer: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     borderRadius: 20,
     padding: 25,
-    shadowColor: '#000',
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.6,
     shadowRadius: 8,
     elevation: 5,
   },
   googleButton: {
-    backgroundColor: 'white',
+    backgroundColor: c.card,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -323,8 +327,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#dadce0',
-    shadowColor: '#000',
+    borderColor: c.googleBorder,
+    shadowColor: c.shadow,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -335,7 +339,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   googleButtonText: {
-    color: '#3c4043',
+    color: c.googleText,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -352,37 +356,38 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: c.text,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: c.surface,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: c.border,
+    color: c.text,
   },
   registerButton: {
-    backgroundColor: '#8E24AA',
+    backgroundColor: c.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: '#8E24AA',
+    shadowColor: c.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: c.disabled,
     shadowOpacity: 0,
-    borderColor: '#ccc',
+    borderColor: c.borderStrong,
   },
   registerButtonText: {
-    color: 'white',
+    color: c.onPrimary,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -394,11 +399,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: c.border,
   },
   dividerText: {
     marginHorizontal: 15,
-    color: '#666',
+    color: c.textSecondary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -410,11 +415,11 @@ const styles = StyleSheet.create({
   },
   loginPromptText: {
     fontSize: 16,
-    color: '#666',
+    color: c.textSecondary,
   },
   loginLink: {
     fontSize: 16,
-    color: '#8E24AA',
+    color: c.primaryText,
     fontWeight: '600',
   },
   disabledLink: {
