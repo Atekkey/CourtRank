@@ -1,7 +1,7 @@
 import { 
   collection, addDoc, getDocs, doc, updateDoc, deleteDoc, getDoc,
   query, where, orderBy, onSnapshot, setDoc, writeBatch,
-  arrayUnion, arrayRemove, deleteField,
+  arrayUnion, arrayRemove, deleteField, FieldPath,
   serverTimestamp , getDocFromCache, getDocsFromCache, getDocsFromServer, getDocFromServer,
   limit,
   endBefore,
@@ -325,22 +325,20 @@ export const joinLeague = async (league_id, user_id) => {
       throw new Error('You are already a member of this league');
     }
 
-    // Add user to the league's players array
-    await setDoc(leagueRef, {
-      players: arrayUnion(user_id),
-      elo_info: {
-        [user_id]: {
-          elo: leagueData.starting_elo || 800,
-          wins: 0,
-          losses: 0,
-          ties: 0,
-          first_name: playerData.first_name || '',
-          last_name: playerData.last_name || '',
-          score: 0,
-          opp_elo_sum: 0
-        }
+    // Add user to the league's players array (field paths so other elo_info entries are untouched)
+    await updateDoc(leagueRef,
+      'players', arrayUnion(user_id),
+      new FieldPath('elo_info', user_id), {
+        elo: leagueData.starting_elo || 800,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        first_name: playerData.first_name || '',
+        last_name: playerData.last_name || '',
+        score: 0,
+        opp_elo_sum: 0
       }
-    }, { merge: true });
+    );
     
     return { success: true, message: 'Successfully joined the league' };
   } catch (error) {
@@ -362,13 +360,11 @@ export const leaveLeague = async (league_id, user_id) => {
       throw new Error('You are not a member of this league');
     }
 
-    // Remove user from the league's players array
-    await setDoc(leagueRef, {
-      players: arrayRemove(user_id),
-      elo_info: {
-        [user_id]: deleteField()
-      }
-    }, { merge: true });
+    // Remove user from players and delete only their elo_info entry
+    await updateDoc(leagueRef,
+      'players', arrayRemove(user_id),
+      new FieldPath('elo_info', user_id), deleteField()
+    );
 
     return { success: true, message: 'Successfully left the league' };
   } catch (error) {
@@ -596,17 +592,12 @@ export const updateUserNames = async (userId, first, last) => {
 
     leaguesSnapshot.forEach(leagueDoc => {
       const leagueRef = doc(db, 'leagues', leagueDoc.id);
-      const data = leagueDoc.data() || {};
-      const elo_info = data.elo_info || {};
 
-      if (!(elo_info[userId])) {
-        elo_info[userId] = { first_name: first, last_name: last };
-      } else {
-        elo_info[userId].first_name = first;
-        elo_info[userId].last_name = last;
-      }
-
-      batch.update(leagueRef, { elo_info });
+      // Only touch this user's name fields so other players' stats aren't overwritten
+      batch.update(leagueRef,
+        new FieldPath('elo_info', userId, 'first_name'), first,
+        new FieldPath('elo_info', userId, 'last_name'), last
+      );
     });
 
     await batch.commit();
