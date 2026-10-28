@@ -29,7 +29,7 @@
     }
   },
   "firestore": {
-    "database": "(default)",
+    "database": "courtrank-8-25-26",
     "location": "nam5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

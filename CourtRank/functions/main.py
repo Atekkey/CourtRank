@@ -18,6 +18,8 @@ set_global_options(max_instances=10)
 
 initialize_app()
 
+FIRESTORE_DB = "courtrank-8-25-26"
+
 def expVal(ratingMe, ratingOpp):
     return 1 / (1 + 10 ** ((ratingOpp - ratingMe) / 400))
 
@@ -54,6 +56,7 @@ def calculateK(teamA = None, teamB = None, baseK=40):
 
 @firestore_fn.on_document_created(
     document="matches/{matchId}",
+    database=FIRESTORE_DB,
     timeout_sec=300,
     memory=256
 )
@@ -82,7 +85,7 @@ def on_match_created(event: firestore_fn.Event[firestore_fn.DocumentSnapshot | N
     new_k_factor = calculateK(winInput, loseInput, baseK=league_k_factor)
     winOutput, loseOutput = teamUpdateRating(winInput, loseInput, new_k_factor)
 
-    db = firestore.client()
+    db = firestore.client(database_id=FIRESTORE_DB)
     match_ref = event.data.reference
     league_ref = db.collection("leagues").document(leagueID)
 
@@ -156,7 +159,7 @@ def rollback_match(req: https_fn.CallableRequest):
             message="match_id is required"
         )
 
-    db = firestore.client()
+    db = firestore.client(database_id=FIRESTORE_DB)
     match_ref = db.collection("matches").document(match_id)
     match_doc = match_ref.get()
 

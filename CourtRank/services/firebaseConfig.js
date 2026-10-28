@@ -28,7 +28,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 
 // Initialize services you'll actually use
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getFirestore(app, "courtrank-8-25-26");
 export const functions = getFunctions(app);
 
 
