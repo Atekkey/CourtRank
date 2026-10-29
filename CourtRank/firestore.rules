@@ -3,17 +3,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 9, 9);
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Players: anyone signed in can view profiles, only the owner can write their own
+    match /players/{playerId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isUser(playerId);
+    }
+
+    // Leagues
+    match /leagues/{leagueId} {
+      allow read: if signedIn();
+
+      // Creator must set themselves as admin
+      allow create: if signedIn() && request.resource.data.admin_pid == request.auth.uid;
+
+      // Admin can edit anything (info, end date, roster)
+      // Members can only change their own players[] entry and elo_info[uid] (join, leave, rename)
+      allow update: if signedIn() && (
+        resource.data.admin_pid == request.auth.uid || onlyTouchesSelf()
+      );
+
+      allow delete: if signedIn() && resource.data.admin_pid == request.auth.uid;
+
+      function onlyTouchesSelf() {
+        let uid = request.auth.uid;
+        let before = resource.data;
+        let after = request.resource.data;
+        let oldPlayers = before.get('players', []).toSet();
+        let newPlayers = after.get('players', []).toSet();
+        return after.diff(before).affectedKeys().hasOnly(['players', 'elo_info'])
+          && newPlayers.difference(oldPlayers).union(oldPlayers.difference(newPlayers)).hasOnly([uid])
+          && after.get('elo_info', {}).diff(before.get('elo_info', {})).affectedKeys().hasOnly([uid]);
+      }
+    }
+
+    // Matches: created by players; ELO processing and rollback happen in Cloud Functions (admin SDK)
+    match /matches/{matchId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+
+    // Notifications: visible only to the players they're addressed to
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.players;
+      allow create: if signedIn();
+      allow update, delete: if false;
     }
   }
 }
